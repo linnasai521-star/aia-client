@@ -5,6 +5,75 @@ import * as db from '../db/indexeddb.js';
 
 const h = React.createElement;
 
+// 提取 PNG 中的文本块
+function extractPngTextChunks(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  
+  // 验证 PNG 签名
+  if (bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4E || bytes[3] !== 0x47) {
+    throw new Error('不是有效的 PNG 文件');
+  }
+  
+  const chunks = [];
+  let offset = 8; // 跳过 PNG 签名
+  
+  while (offset < bytes.length - 12) {
+    const length = (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+    const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
+    
+    if (type === 'tEXt' || type === 'iTXt') {
+      const data = bytes.slice(offset + 8, offset + 8 + length);
+      const nullIdx = data.indexOf(0);
+      
+      if (nullIdx > 0) {
+        const keyword = String.fromCharCode(...data.slice(0, nullIdx));
+        let text;
+        
+        if (type === 'tEXt') {
+          text = String.fromCharCode(...data.slice(nullIdx + 1));
+        } else {
+          let pos = nullIdx + 1;
+          // 跳过压缩标志、语言标签、翻译关键词
+          while (pos < data.length && data[pos] !== 0) pos++;
+          pos++;
+          while (pos < data.length && data[pos] !== 0) pos++;
+          pos++;
+          text = String.fromCharCode(...data.slice(pos));
+        }
+        
+        chunks.push({ keyword, text, type });
+      }
+    }
+    
+    offset += 12 + length;
+    if (type === 'IEND') break;
+  }
+  
+  return chunks;
+}
+
+// 解析角色卡数据
+function parseCardData(json) {
+  const d = json.data || json;
+  
+  return {
+    id: genId(),
+    name: d.name || json.name || 'Unknown',
+    description: d.description || '',
+    personality: d.personality || '',
+    systemPrompt: d.system_prompt || d.systemPrompt || d.personality || '',
+    firstMessage: d.first_mes || d.firstMessage || '',
+    exampleDialogue: d.mes_example || '',
+    creatorNotes: d.creator_notes || '',
+    tags: d.tags || [],
+    creator: d.creator || '',
+    characterVersion: d.character_version || '',
+    worldBook: d.character_book || d.lorebook || null,
+    avatar: json.avatar || null,
+    createdAt: Date.now(),
+  };
+}
+
 export function Sidebar() {
   const ctx = useContext(Ctx);
   const [search, setSearch] = useState('');
@@ -19,22 +88,91 @@ export function Sidebar() {
   const handleImportCard = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
     try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      const d = json.data || json;
-      const card = {
-        id: genId(), name: d.name || json.name || 'Unknown',
-        description: d.description || '', personality: d.personality || '',
-        systemPrompt: d.system_prompt || d.systemPrompt || d.personality || '',
-        firstMessage: d.first_mes || d.firstMessage || '',
-        exampleDialogue: d.mes_example || '', creatorNotes: d.creator_notes || '',
-        tags: d.tags || [], creator: d.creator || '', createdAt: Date.now(),
-      };
+      let card;
+      const isPng = file.name.toLowerCase().endsWith('.png');
+      
+      if (isPng) {
+        // PNG 角色卡导入
+        const arrayBuffer = await file.arrayBuffer();
+        const chunks = extractPngTextChunks(arrayBuffer);
+        
+        let cardData = null;
+        for (const chunk of chunks) {
+          if (chunk.keyword === 'chara' || chunk.keyword === 'ccv3' || chunk.keyword === 'character') {
+            try {
+              // 尝试 base64 解码
+              const decoded = atob(chunk.text.trim());
+              cardData = JSON.parse(decoded);
+              break;
+            } catch {
+              try {
+                // 直接解析 JSON
+                cardData = JSON.parse(chunk.text);
+                break;
+              } catch {
+                continue;
+              }
+            }
+          }
+        }
+        
+        if (!cardData) {
+          throw new Error('PNG 中未找到角色卡数据');
+        }
+        
+        card = parseCardData(cardData);
+        
+        // 处理关联的世界书
+        if (cardData.data?.character_book || cardData.character_book) {
+          const worldBookData = cardData.data?.character_book || cardData.character_book;
+          if (worldBookData.entries) {
+            for (const [key, entry] of Object.entries(worldBookData.entries)) {
+              await db.putWorldBookEntry({
+                id: genId(),
+                convId: '_global',
+                keywords: entry.keys || [],
+                content: entry.content || '',
+                constant: entry.constant || false,
+                enabled: entry.enabled !== false,
+                priority: entry.insertion_order || 3,
+              });
+            }
+            ctx.setWB(await db.getWorldBook('_global'));
+          }
+        }
+      } else {
+        // JSON 角色卡导入
+        const text = await file.text();
+        const json = JSON.parse(text);
+        
+        card = parseCardData(json);
+        
+        // 处理关联的世界书
+        const worldBookData = json.data?.character_book || json.character_book || json.lorebook;
+        if (worldBookData?.entries) {
+          for (const [key, entry] of Object.entries(worldBookData.entries)) {
+            await db.putWorldBookEntry({
+              id: genId(),
+              convId: '_global',
+              keywords: entry.keys || [],
+              content: entry.content || '',
+              constant: entry.constant || false,
+              enabled: entry.enabled !== false,
+              priority: entry.insertion_order || 3,
+            });
+          }
+          ctx.setWB(await db.getWorldBook('_global'));
+        }
+      }
+      
       await db.putCharacter(card);
       ctx.setCharCard(card);
       showToast('角色卡导入成功', 'success');
-    } catch (err) { showToast('导入失败: ' + err.message, 'error'); }
+    } catch (err) {
+      showToast('导入失败: ' + err.message, 'error');
+    }
     e.target.value = '';
   };
 
@@ -103,7 +241,7 @@ export function Sidebar() {
       h('div', { className: 'sidebar-footer' },
         h('input', { ref: cardRef, type: 'file', accept: '.json,.png', style: { display: 'none' }, onChange: handleImportCard }),
         h('input', { ref: wbRef, type: 'file', accept: '.json', style: { display: 'none' }, onChange: handleImportWB }),
-        h('button', { className: 'import-btn', onClick: () => cardRef.current?.click() }, '📋 导入角色卡'),
+        h('button', { className: 'import-btn', onClick: () => cardRef.current?.click() }, '📋 导入角色卡 (JSON/PNG)'),
         h('button', { className: 'import-btn', onClick: () => wbRef.current?.click() }, '📚 导入世界书')
       )
     )
