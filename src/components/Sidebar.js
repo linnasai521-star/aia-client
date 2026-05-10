@@ -1,3 +1,4 @@
+// PNG角色卡支持已添加 - v1.0
 import React, { useContext, useState, useRef, useMemo } from 'react';
 import { Ctx } from '../state.js';
 import { genId, timeAgo, showToast } from '../utils/helpers.js';
