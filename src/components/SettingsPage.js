@@ -1,11 +1,21 @@
 import React, { useContext, useState } from 'react';
 import { Ctx } from '../state.js';
 import { encryptStr, decryptStr } from '../utils/crypto.js';
-import { createProvider, getProviderList, PRESETS } from '../providers/registry.js';
-import { genId, showToast } from '../utils/helpers.js';
+import { createProvider, getProviderList } from '../providers/registry.js';
+import { normalizeBaseURL } from '../providers/baseProvider.js';
+import { showToast } from '../utils/helpers.js';
 import * as db from '../db/indexeddb.js';
 
 const h = React.createElement;
+
+const PROVIDER_MODELS = {
+  openai:      ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
+  deepseek:    ['deepseek-chat', 'deepseek-reasoner'],
+  claude:      ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
+  gemini:      ['gemini-2.0-flash', 'gemini-1.5-pro'],
+  openrouter:  ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-2.0-flash'],
+  siliconflow: ['deepseek-ai/DeepSeek-V3', 'deepseek-ai/DeepSeek-R1', 'Qwen/Qwen2.5-72B-Instruct'],
+};
 
 export function SettingsPage() {
   const ctx = useContext(Ctx);
@@ -21,37 +31,22 @@ export function SettingsPage() {
   const s = ctx.settings;
   const providerList = getProviderList();
 
-    // 自动补全 API 地址 - 兼容 OpenAI 格式
-  const autoCompleteApiUrl = () => {
-    let url = s.apiUrl || '';
-    if (!url) return;
-    
-    // 移除末尾斜杠
-    url = url.replace(/\/+$/, '');
-    
-    // 如果是 OpenAI 官方地址，确保使用正确的域名
-    if (url.includes('api.openai.com') && !url.startsWith('https://')) {
-      url = 'https://' + url.replace(/^https?:\/\//, '');
+  const handleProviderChange = (val) => {
+    ctx.saveSetting('provider', val);
+    const preset = providerList.find(p => p.id === val);
+    if (preset) {
+      ctx.saveSetting('apiUrl', preset.apiUrl);
+      ctx.saveSetting('model', '');
     }
-    
-    // 检查是否已经包含 OpenAI 兼容端点
-    if (url.includes('/v1/chat/completions') || url.includes('/v1/models')) {
-      // 已经是完整路径
-      showToast('API地址已经是完整格式', 'info');
-    } else if (url.includes('/v1')) {
-      // 有 /v1 但没有具体端点，添加 /chat/completions
-      url = url.replace(/\/v1$/, '') + '/v1/chat/completions';
-      ctx.saveSetting('apiUrl', url);
-      showToast('已补全为 OpenAI 兼容格式: /v1/chat/completions', 'success');
-    } else if (url.includes('/v1/chat/completions')) {
-      // 已经是完整格式
-      showToast('API地址已经是完整格式', 'info');
-    } else {
-      // 没有 /v1，添加完整路径
-      url = url + '/v1/chat/completions';
-      ctx.saveSetting('apiUrl', url);
-      showToast('已补全为 OpenAI 兼容格式: /v1/chat/completions', 'success');
+  };
+
+  const handleApiUrlChange = (val) => {
+    // 如果是域名补全协议
+    let v = val.trim();
+    if (v && !v.startsWith('http://') && !v.startsWith('https://') && v.includes('.')) {
+      v = 'https://' + v;
     }
+    ctx.saveSetting('apiUrl', v);
   };
 
   const handleTest = async () => {
@@ -64,23 +59,27 @@ export function SettingsPage() {
       }
       if (!key) throw new Error('请先填写 API Key');
       
-      // 自动补全 API 地址
       let apiUrl = s.apiUrl || '';
-      if (!apiUrl.includes('/v1') && !apiUrl.includes('/chat/completions')) {
-        apiUrl = apiUrl.replace(/\/$/, '') + '/v1';
+      // 自动修复常见问题
+      const normalized = normalizeBaseURL(apiUrl);
+      if (normalized !== apiUrl) {
+        apiUrl = normalized;
         ctx.saveSetting('apiUrl', apiUrl);
+        showToast('已自动修复 API 地址格式', 'success');
       }
       
-      const p = createProvider(s.provider || 'openai', { apiUrl, apiKey: key, model: s.model });
+      const p = createProvider(s.provider || 'openai', { apiUrl, apiKey: key, model: s.model || 'gpt-4o' });
       const list = await p.listModels();
-      setTestResult({ ok: true, msg: `连接成功！发现 ${list.length} 个模型。` });
+      setTestResult({ ok: true, msg: `连接成功！发现 ${list.length} 个可用模型。` });
       setModelList(list);
     } catch (err) {
-      let errorMsg = err.message;
-      if (errorMsg.includes('404')) {
-        errorMsg = 'HTTP 404 - API地址可能不正确。请检查地址是否以 /v1 结尾，或是否需要完整路径如 /v1/chat/completions';
-      }
-      setTestResult({ ok: false, msg: errorMsg });
+      const msg = err.message;
+      let friendly = msg;
+      if (msg.includes('404') || msg.includes('not found')) friendly = '无法连接到接口，请检查 API 地址是否正确。';
+      else if (msg.includes('401') || msg.includes('403') || msg.includes('unauthorized')) friendly = 'API Key 无效，请检查密钥。';
+      else if (msg.includes('429')) friendly = '请求过于频繁，请稍后重试。';
+      else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) friendly = '网络连接失败，请检查地址或网络。';
+      setTestResult({ ok: false, msg: friendly });
     }
     setTestLoading(false);
   };
@@ -96,291 +95,173 @@ export function SettingsPage() {
       if (!key) throw new Error('请先填写 API Key');
       
       let apiUrl = s.apiUrl || '';
-      if (!apiUrl.includes('/v1') && !apiUrl.includes('/chat/completions')) {
-        apiUrl = apiUrl.replace(/\/$/, '') + '/v1';
-        ctx.saveSetting('apiUrl', apiUrl);
-      }
+      apiUrl = normalizeBaseURL(apiUrl);
+      if (apiUrl !== s.apiUrl) ctx.saveSetting('apiUrl', apiUrl);
       
-      const p = createProvider(s.provider || 'openai', { apiUrl, apiKey: key, model: s.model });
+      const p = createProvider(s.provider || 'openai', { apiUrl, apiKey: key, model: s.model || 'gpt-4o' });
       const list = await p.listModels();
       setModelList(list);
-      showToast(`获取到 ${list.length} 个模型`, 'success');
+      setTestResult({ ok: true, msg: `获取到 ${list.length} 个模型。` });
     } catch (err) {
-      showToast('获取模型列表失败: ' + err.message, 'error');
+      setTestResult({ ok: false, msg: err.message });
     }
     setFetchingModels(false);
   };
 
-  const handleSaveKey = async () => {
-    if (!keyInput) return;
-    if (s.pinHash) {
-      if (!s._sessionPin) { showToast('请先解锁 PIN', 'error'); return; }
-      const enc = await encryptStr(keyInput, s._sessionPin);
-      ctx.saveSetting('encryptedKey', enc);
-      ctx.saveSetting('apiKey', '');
-    } else {
-      ctx.saveSetting('apiKey', keyInput);
-    }
-    showToast('API Key 已保存', 'success');
-    setKeyInput('');
-  };
+  const recommendedModels = PROVIDER_MODELS[s.provider] || [];
 
-  const addWBEntry = async () => {
-    if (!newWC.trim()) return;
-    const entry = {
-      id: genId(), convId: '_global',
-      keywords: newKW.split(',').map(x => x.trim()).filter(Boolean),
-      content: newWC, constant: false, enabled: true, priority: 3,
-    };
-    await db.putWorldBookEntry(entry);
-    ctx.setWB(w => [...w, entry]);
-    setNewKW(''); setNewWC('');
-  };
+  return h('div', { className: 'settings-page' },
+    h('div', { className: 'settings-container' },
+      // 标题
+      h('div', { className: 'settings-header' },
+        h('button', { className: 'back-btn', onClick: () => ctx.setPage('chat') }, '← 返回'),
+        h('h2', null, '设置')
+      ),
 
-  const delWBEntry = async (id) => {
-    await db.deleteWorldBookEntry(id);
-    ctx.setWB(w => w.filter(e => e.id !== id));
-  };
-
-  const toggleConst = async (entry) => {
-    entry.constant = !entry.constant;
-    await db.putWorldBookEntry(entry);
-    ctx.setWB(w => w.map(e => e.id === entry.id ? { ...e, constant: entry.constant } : e));
-  };
-
-  const handleBackgroundChange = (bg) => {
-    ctx.saveSetting('customBackground', bg);
-  };
-
-  return h(React.Fragment, null,
-    h('header', { className: 'header' },
-      h('button', { className: 'btn-icon menu-btn', onClick: () => ctx.setPage('chat') }, '←'),
-      h('span', { className: 'header-title' }, '⚙️ 设置')
-    ),
-    h('div', { className: 'settings-page' },
-      h('div', { className: 'settings-inner' },
-        // API Config - Custom API Section
-        h('div', { className: 'section' },
-          h('div', { className: 'section-title' }, '🔌 自定义 API 配置'),
-          
-          // Provider 预设
-          h('div', { className: 'field' },
-            h('label', null, '快速选择（可选）'),
-            h('select', { 
-              value: s.provider || 'custom', 
-              onChange: e => {
-                ctx.saveSetting('provider', e.target.value);
-                const preset = PRESETS[e.target.value];
-                if (preset) {
-                  ctx.saveSetting('apiUrl', preset.apiUrl);
-                  ctx.saveSetting('model', preset.model);
-                }
-              }
-            }, [
-              ...providerList.map(p => h('option', { key: p.id, value: p.id }, p.name)),
-              h('option', { key: 'custom', value: 'custom' }, '🔧 自定义')
-            ])
-          ),
-          
-          // API 地址
-          h('div', { className: 'field' },
-            h('label', null, 'API 地址（必填）'),
-            h('div', { style: { display: 'flex', gap: 8 } },
-              h('input', { 
-                value: s.apiUrl || '',
-                onChange: e => {
-                  let val = e.target.value;
-                  ctx.saveSetting('apiUrl', val);
-                  // 如果输入的是域名，自动补全 https://
-                  if (val && !val.startsWith('http://') && !val.startsWith('https://') && val.includes('.')) {
-                    if (!val.startsWith('http')) {
-                      ctx.saveSetting('apiUrl', 'https://' + val);
-                    }
-                  }
-                }, 
-                placeholder: 'https://api.openai.com/v1',
-                style: { fontSize: '16px', flex: 1 }
-              }),
-              h('button', { 
-                className: 'btn btn-ghost', 
-                onClick: autoCompleteApiUrl,
-                style: { whiteSpace: 'nowrap' }
-              }, '🔧 补全')
-            ),
-            h('div', { className: 'field-hint' }, 
-              '输入域名自动补全HTTPS，点击"补全"添加/v1。例如: api.openai.com → https://api.openai.com/v1'
-            )
-          ),
-          
-          // API Key
-          h('div', { className: 'field' },
-            h('label', null, 'API Key（必填）'),
-            h('div', { style: { display: 'flex', gap: 8 } },
-              h('input', { 
-                type: showKey ? 'text' : 'password', 
-                value: keyInput, 
-                onChange: e => setKeyInput(e.target.value), 
-                placeholder: 'sk-...',
-                style: { fontSize: '16px' }
-              }),
-              h('button', { 
-                className: 'btn-icon', 
-                onClick: () => setShowKey(!showKey) 
-              }, showKey ? '🙈' : '👁')
-            ),
-            h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } },
-              h('button', { 
-                className: 'btn btn-primary', 
-                onClick: handleSaveKey, 
-                disabled: !keyInput 
-              }, '💾 保存 Key'),
-              h('button', { 
-                className: 'btn btn-ghost', 
-                onClick: handleTest, 
-                disabled: testLoading 
-              }, testLoading ? '⏳ 测试中...' : '🔍 测试连接'),
-              h('button', { 
-                className: 'btn btn-ghost', 
-                onClick: handleFetchModels, 
-                disabled: fetchingModels 
-              }, fetchingModels ? '⏳ 获取中...' : '📋 获取模型')
-            ),
-            testResult ? h('div', { 
-              className: testResult.ok ? 'test-ok' : 'test-err' 
-            }, testResult.msg) : null
-          ),
-          
-          // 模型列表显示
-          modelList.length > 0 ? h('div', { className: 'field' },
-            h('label', null, '可用模型列表'),
-            h('div', { className: 'model-list', style: { maxHeight: 200, overflowY: 'auto', border: '1px solid var(--glass-border)', borderRadius: 8, padding: 8 } },
-              modelList.map((model, i) => h('div', { 
-                key: i, 
-                className: 'model-item',
-                style: { padding: '4px 8px', cursor: 'pointer', borderBottom: i < modelList.length - 1 ? '1px solid var(--glass-border)' : 'none' },
-                onClick: () => {
-                  ctx.saveSetting('model', model.id || model.name);
-                  showToast(`已选择模型: ${model.id || model.name}`, 'success');
-                }
-              }, model.id || model.name))
-            )
-          ) : null,
-          
-          // 模型
-          h('div', { className: 'field' },
-            h('label', null, '模型名称'),
-            h('input', { 
-              value: s.model || '', 
-              onChange: e => ctx.saveSetting('model', e.target.value), 
-              placeholder: 'gpt-4o, deepseek-chat, claude-3-sonnet',
-              style: { fontSize: '16px' }
-            }),
-            h('div', { className: 'field-hint' }, 
-              '输入你要使用的模型名称，例如: gpt-4o, deepseek-chat'
-            )
+      // Provider 选择
+      h('div', { className: 'setting-group' },
+        h('label', null, '选择服务商'),
+        h('select', {
+          value: s.provider || 'custom',
+          onChange: e => handleProviderChange(e.target.value),
+          className: 'setting-select'
+        },
+          h('option', { value: 'custom' }, '自定义'),
+          ...providerList.map(p => h('option', { key: p.id, value: p.id }, p.name))
+        ),
+        s.provider && s.provider !== 'custom' &&
+          h('div', { style: { fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' } },
+            `已自动填写 ${providerList.find(p=>p.id===s.provider)?.name} 的地址`
           )
+      ),
+
+      // API 地址
+      h('div', { className: 'setting-group' },
+        h('label', null, 'API 地址'),
+        h('div', { style: { position: 'relative' } },
+          h('input', {
+            value: s.apiUrl || '',
+            onChange: e => handleApiUrlChange(e.target.value),
+            placeholder: 'https://api.deepseek.com',
+            className: 'setting-input',
+            style: { paddingRight: '40px' }
+          }),
+          s.apiUrl && s.apiUrl.includes('/chat/completions') &&
+            h('div', { style: {
+              fontSize: '0.6875rem', color: '#fbbf24', marginTop: '2px'
+            }}, '检测到完整端点，系统已自动简化地址。')
         ),
-        
-        // 背景设置
-        h('div', { className: 'section' },
-          h('div', { className: 'section-title' }, '🎨 背景设置'),
-          h('div', { className: 'field' },
-            h('label', null, '自定义背景'),
-            h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
-              [
-                { label: '默认深色', value: '' },
-                { label: '星空', value: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' },
-                { label: '森林', value: 'linear-gradient(135deg, #134e5e, #71b280)' },
-                { label: '海洋', value: 'linear-gradient(135deg, #2193b0, #6dd5ed)' },
-                { label: '日落', value: 'linear-gradient(135deg, #ff7e5f, #feb47b)' },
-                { label: '极光', value: 'linear-gradient(135deg, #00c6ff, #0072ff)' }
-              ].map(bg => h('button', {
-                key: bg.value,
-                className: `btn btn-ghost ${s.customBackground === bg.value ? 'active' : ''}`,
-                onClick: () => handleBackgroundChange(bg.value),
-                style: { 
-                  background: bg.value || 'var(--bg-secondary)',
-                  color: 'white',
-                  minWidth: 80,
-                  height: 40,
-                  border: s.customBackground === bg.value ? '2px solid var(--accent-primary)' : '1px solid var(--glass-border)'
-                }
-              }, bg.label))
-            )
-          ),
-          h('div', { className: 'field' },
-            h('label', null, '自定义背景色'),
-            h('input', { 
-              type: 'color', 
-              value: s.customBackgroundColor || '#0f1115',
-              onChange: e => ctx.saveSetting('customBackgroundColor', e.target.value),
-              style: { width: '100%', height: 40, border: 'none', borderRadius: 8 }
-            })
-          )
-        ),
-        
-        // Parameters
-        h('div', { className: 'section' },
-          h('div', { className: 'section-title' }, '🎛️ 生成参数'),
-          h('div', { className: 'field' }, h('div', { className: 'range-row' },
-            h('label', null, 'Max Tokens'), h('input', { type: 'range', min: 256, max: 128000, step: 256, value: s.maxTokens || 4096, onChange: e => ctx.saveSetting('maxTokens', e.target.value) }),
-            h('span', { className: 'range-val' }, s.maxTokens || 4096)
-          )),
-          h('div', { className: 'field' }, h('div', { className: 'range-row' },
-            h('label', null, 'Temperature'), h('input', { type: 'range', min: 0, max: 2, step: 0.05, value: s.temperature ?? 0.7, onChange: e => ctx.saveSetting('temperature', e.target.value) }),
-            h('span', { className: 'range-val' }, s.temperature ?? 0.7)
-          )),
-          h('div', { className: 'field' }, h('div', { className: 'range-row' },
-            h('label', null, 'Top P'), h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s.topP ?? 1, onChange: e => ctx.saveSetting('topP', e.target.value) }),
-            h('span', { className: 'range-val' }, s.topP ?? 1)
-          )),
-          h('div', { className: 'toggle-row' }, h('label', null, '流式输出'),
-            h('div', { className: `toggle ${s.stream !== false ? 'on' : ''}`, onClick: () => ctx.saveSetting('stream', s.stream === false ? true : false) })
-          ),
-          h('div', { className: 'field' },
-            h('label', null, '系统提示词'),
-            h('textarea', { value: s.systemPrompt || '', onChange: e => ctx.saveSetting('systemPrompt', e.target.value), placeholder: 'You are a helpful assistant.', rows: 4 })
-          )
-        ),
-        // Security
-        h('div', { className: 'section' },
-          h('div', { className: 'section-title' }, '🔒 安全'),
-          h('div', { className: 'toggle-row' }, h('label', null, '启用 PIN 锁定'),
-            h('div', { className: `toggle ${s.pinHash ? 'on' : ''}`, onClick: () => {
-              if (s.pinHash) {
-                ctx.saveSetting('pinHash', null); ctx.saveSetting('encryptedKey', null);
-                ctx.setPinHash(null); showToast('PIN 已移除', 'success');
-              } else { ctx.setLocked(true); }
-            } })
-          ),
-          h('div', { className: 'field-hint' }, s.pinHash ? 'API Key 已加密存储' : 'API Key 明文存储')
-        ),
-        // World Book
-        h('div', { className: 'section' },
-          h('div', { className: 'section-title' }, '📚 世界书'),
-          h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 } },
-            h('input', { value: newKW, onChange: e => setNewKW(e.target.value), placeholder: '关键词（逗号分隔）' }),
-            h('textarea', { value: newWC, onChange: e => setNewWC(e.target.value), rows: 3, placeholder: '条目内容...' }),
-            h('button', { className: 'btn btn-primary', onClick: addWBEntry, style: { alignSelf: 'flex-start' } }, '+ 添加')
-          ),
-          ctx.wb.map(e => h('div', { key: e.id, className: 'wb-entry' },
-            h('div', { className: 'tags' },
-              (e.keywords || []).map((k, i) => h('span', { key: i, className: 'tag tag-blue' }, k)),
-              e.constant ? h('span', { className: 'tag tag-yellow' }, '常驻') : null
-            ),
-            h('div', { className: 'content' }, e.content),
-            h('div', { className: 'actions' },
-              h('button', { className: 'btn-icon', onClick: () => toggleConst(e) }, e.constant ? '📌' : '📍'),
-              h('button', { className: 'btn-icon', onClick: () => delWBEntry(e.id) }, '✕')
-            )
-          )),
-          ctx.wb.length === 0 ? h('div', { style: { textAlign: 'center', color: 'var(--text3)', padding: 16, fontSize: 13 } }, '暂无条目') : null
-        ),
-        h('div', { style: { textAlign: 'center', padding: 20, color: 'var(--text3)', fontSize: 12 } },
-          h('p', null, 'AI Aggregator v3.0'),
-          h('p', null, 'Modular · IndexedDB · AES-GCM · SSE Parser')
+        h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' } },
+          '只需填写基础域名，如 api.deepseek.com'
         )
-      )
+      ),
+
+      // API Key
+      h('div', { className: 'setting-group' },
+        h('label', null, 'API Key'),
+        h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+          h('input', {
+            type: showKey ? 'text' : 'password',
+            value: keyInput || (s.encryptedKey ? '••••••••' : ''),
+            onChange: e => setKeyInput(e.target.value),
+            placeholder: 'sk-...',
+            className: 'setting-input',
+            style: { flex: 1 }
+          }),
+          h('button', {
+            className: 'setting-btn small',
+            onClick: () => setShowKey(!showKey)
+          }, showKey ? '隐藏' : '显示')
+        )
+      ),
+
+      // 模型
+      h('div', { className: 'setting-group' },
+        h('label', null, '模型'),
+        h('input', {
+          value: s.model || '',
+          onChange: e => ctx.saveSetting('model', e.target.value),
+          placeholder: recommendedModels[0] || 'gpt-4o, deepseek-chat, ...',
+          className: 'setting-input',
+          list: 'model-suggest'
+        }),
+        h('datalist', { id: 'model-suggest' },
+          ...recommendedModels.map(m => h('option', { key: m, value: m }))
+        ),
+        recommendedModels.length > 0 && h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' } },
+          `推荐: ${recommendedModels.slice(0,3).join(', ')}`
+        )
+      ),
+
+      // 测试连接
+      h('div', { className: 'setting-group' },
+        h('div', { style: { display: 'flex', gap: '8px' } },
+          h('button', {
+            className: 'setting-btn primary',
+            onClick: handleTest,
+            disabled: testLoading
+          }, testLoading ? '测试中...' : '测试连接'),
+          h('button', {
+            className: 'setting-btn',
+            onClick: handleFetchModels,
+            disabled: fetchingModels
+          }, fetchingModels ? '获取中...' : '获取模型列表')
+        ),
+        testResult && h('div', {
+          style: {
+            marginTop: '8px', padding: '10px 14px',
+            borderRadius: '12px', fontSize: '0.8125rem',
+            background: testResult.ok ? 'rgba(74, 222, 128, 0.06)' : 'rgba(248, 113, 113, 0.06)',
+            border: '1px solid ' + (testResult.ok ? 'rgba(74, 222, 128, 0.12)' : 'rgba(248, 113, 113, 0.12)'),
+            color: testResult.ok ? 'var(--text-primary)' : 'var(--text-secondary)'
+          }
+        }, testResult.msg),
+        modelList.length > 0 && h('div', { style: { marginTop: '8px', maxHeight: '200px', overflowY: 'auto' } },
+          ...modelList.map(m => h('div', {
+            key: m,
+            style: {
+              padding: '4px 8px', fontSize: '0.75rem',
+              cursor: 'pointer', borderRadius: '6px',
+              color: 'var(--text-muted)',
+            },
+            onClick: () => { ctx.saveSetting('model', m); showToast('已选择: ' + m); }
+          }, m))
+        )
+      ),
+
+      // 系统提示词
+      h('div', { className: 'setting-group' },
+        h('label', null, '系统提示词'),
+        h('textarea', {
+          value: s.systemPrompt || '',
+          onChange: e => ctx.saveSetting('systemPrompt', e.target.value),
+          placeholder: '设置角色的行为规则和性格描述...',
+          rows: 4,
+          className: 'setting-textarea'
+        })
+      ),
+
+      // 保存按钮
+      h('button', {
+        className: 'setting-btn primary',
+        style: { width: '100%', marginTop: '16px' },
+        onClick: async () => {
+          try {
+            if (keyInput) {
+              const pin = prompt('设置一个记忆密码（用于加密存储）：');
+              if (pin) {
+                const encrypted = await encryptStr(keyInput, pin);
+                ctx.saveSetting('encryptedKey', encrypted);
+                ctx.saveSetting('_sessionPin', pin);
+                setKeyInput('');
+              }
+            }
+            showToast('设置已保存', 'success');
+          } catch (e) {
+            showToast('保存失败: ' + e.message, 'error');
+          }
+        }
+      }, '保存设置')
     )
   );
 }
