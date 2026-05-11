@@ -210,7 +210,7 @@ export function Sidebar() {
     e.target.value = '';
   };
 
-  const TABS = [['chat', '💬 聊天'], ['settings', '⚙️ 设置'], ['character', '🎭 角色']];
+  const TABS = [['chat', '💬 聊天'], ['memory', '🧠 记忆'], ['settings', '⚙️ 设置'], ['character', '🎭 角色']];
 
   return h(React.Fragment, null,
     ctx.sidebar ? h('div', { className: 'sidebar-overlay show', onClick: () => ctx.setSidebar(false) }) : null,
