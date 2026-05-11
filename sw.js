@@ -1,4 +1,4 @@
-const CACHE = 'aia-v8';
+const CACHE = 'aia-v9-force';
 const SHELL = ['./index.html', './manifest.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
