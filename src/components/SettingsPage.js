@@ -21,7 +21,7 @@ export function SettingsPage() {
   const s = ctx.settings;
   const providerList = getProviderList();
 
-  // 自动补全 API 地址
+    // 自动补全 API 地址 - 兼容 OpenAI 格式
   const autoCompleteApiUrl = () => {
     let url = s.apiUrl || '';
     if (!url) return;
@@ -29,18 +29,29 @@ export function SettingsPage() {
     // 移除末尾斜杠
     url = url.replace(/\/+$/, '');
     
-    // 如果没有 /v1 且没有 /chat/completions，则添加 /v1
-    if (!url.includes('/v1') && !url.includes('/chat/completions')) {
-      url = url + '/v1';
-    }
-    
     // 如果是 OpenAI 官方地址，确保使用正确的域名
     if (url.includes('api.openai.com') && !url.startsWith('https://')) {
       url = 'https://' + url.replace(/^https?:\/\//, '');
     }
     
-    ctx.saveSetting('apiUrl', url);
-    showToast('API地址已自动补全', 'success');
+    // 检查是否已经包含 OpenAI 兼容端点
+    if (url.includes('/v1/chat/completions') || url.includes('/v1/models')) {
+      // 已经是完整路径
+      showToast('API地址已经是完整格式', 'info');
+    } else if (url.includes('/v1')) {
+      // 有 /v1 但没有具体端点，添加 /chat/completions
+      url = url.replace(/\/v1$/, '') + '/v1/chat/completions';
+      ctx.saveSetting('apiUrl', url);
+      showToast('已补全为 OpenAI 兼容格式: /v1/chat/completions', 'success');
+    } else if (url.includes('/v1/chat/completions')) {
+      // 已经是完整格式
+      showToast('API地址已经是完整格式', 'info');
+    } else {
+      // 没有 /v1，添加完整路径
+      url = url + '/v1/chat/completions';
+      ctx.saveSetting('apiUrl', url);
+      showToast('已补全为 OpenAI 兼容格式: /v1/chat/completions', 'success');
+    }
   };
 
   const handleTest = async () => {
