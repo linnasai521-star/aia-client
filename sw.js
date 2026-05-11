@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE_NAME = `aia-cache-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
