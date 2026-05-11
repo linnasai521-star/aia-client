@@ -81,44 +81,90 @@ export function SettingsPage() {
     ),
     h('div', { className: 'settings-page' },
       h('div', { className: 'settings-inner' },
-        // API Config
+        // API Config - Custom API Section
         h('div', { className: 'section' },
-          h('div', { className: 'section-title' }, '🔌 API 配置'),
+          h('div', { className: 'section-title' }, '🔌 自定义 API 配置'),
+          
+          // Provider 预设
           h('div', { className: 'field' },
-            h('label', null, 'Provider'),
-            h('select', { value: s.provider || 'openai', onChange: e => {
-              ctx.saveSetting('provider', e.target.value);
-              const preset = PRESETS[e.target.value];
-              if (preset && !s.apiUrl) {
-                ctx.saveSetting('apiUrl', preset.apiUrl);
-                ctx.saveSetting('model', preset.model);
+            h('label', null, '快速选择（可选）'),
+            h('select', { 
+              value: s.provider || 'custom', 
+              onChange: e => {
+                ctx.saveSetting('provider', e.target.value);
+                const preset = PRESETS[e.target.value];
+                if (preset) {
+                  ctx.saveSetting('apiUrl', preset.apiUrl);
+                  ctx.saveSetting('model', preset.model);
+                } else if (e.target.value === 'custom') {
+                  // 清空，让用户自己填
+                }
               }
-            }}, providerList.map(p => h('option', { key: p.id, value: p.id }, p.name)))
+            }, [
+              ...providerList.map(p => h('option', { key: p.id, value: p.id }, p.name)),
+              h('option', { key: 'custom', value: 'custom' }, '🔧 自定义')
+            ])
           ),
+          
+          // API 地址
           h('div', { className: 'field' },
-            h('label', null, 'API 地址'),
-            h('input', { value: s.apiUrl || '', onChange: e => ctx.saveSetting('apiUrl', e.target.value), placeholder: 'https://api.openai.com' })
+            h('label', null, 'API 地址（必填）'),
+            h('input', { 
+              value: s.apiUrl || '', 
+              onChange: e => ctx.saveSetting('apiUrl', e.target.value), 
+              placeholder: 'https://api.openai.com/v1',
+              style: { fontSize: '16px' } // 防止 iOS 缩放
+            }),
+            h('div', { className: 'field-hint' }, 
+              '例如: https://api.openai.com/v1 或 https://your-proxy.com/v1'
+            )
           ),
+          
+          // API Key
           h('div', { className: 'field' },
-            h('label', null, 'API Key'),
+            h('label', null, 'API Key（必填）'),
             h('div', { style: { display: 'flex', gap: 8 } },
-              h('input', { type: showKey ? 'text' : 'password', value: keyInput, onChange: e => setKeyInput(e.target.value), placeholder: s.encryptedKey ? '已加密，输入新的可替换' : 'sk-...' }),
-              h('button', { className: 'btn-icon', onClick: () => setShowKey(!showKey) }, showKey ? '🙈' : '👁')
+              h('input', { 
+                type: showKey ? 'text' : 'password', 
+                value: keyInput, 
+                onChange: e => setKeyInput(e.target.value), 
+                placeholder: 'sk-...',
+                style: { fontSize: '16px' } // 防止 iOS 缩放
+              }),
+              h('button', { 
+                className: 'btn-icon', 
+                onClick: () => setShowKey(!showKey) 
+              }, showKey ? '🙈' : '👁')
             ),
             h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } },
-              h('button', { className: 'btn btn-primary', onClick: handleSaveKey, disabled: !keyInput }, '保存 Key'),
-              h('button', { className: 'btn btn-ghost', onClick: handleTest, disabled: testLoading }, testLoading ? '⏳ 测试中...' : '🔍 测试连接')
+              h('button', { 
+                className: 'btn btn-primary', 
+                onClick: handleSaveKey, 
+                disabled: !keyInput 
+              }, '💾 保存 Key'),
+              h('button', { 
+                className: 'btn btn-ghost', 
+                onClick: handleTest, 
+                disabled: testLoading 
+              }, testLoading ? '⏳ 测试中...' : '🔍 测试连接')
             ),
-            testResult ? h('div', { className: testResult.ok ? 'test-ok' : 'test-err' }, testResult.msg) : null
+            testResult ? h('div', { 
+              className: testResult.ok ? 'test-ok' : 'test-err' 
+            }, testResult.msg) : null
           ),
+          
+          // 模型
           h('div', { className: 'field' },
-            h('label', null, '模型'),
-            ctx.models.length > 0
-              ? h('select', { value: s.model || '', onChange: e => ctx.saveSetting('model', e.target.value) },
-                  h('option', { value: '' }, '选择模型...'),
-                  ctx.models.map(m => h('option', { key: m, value: m }, m))
-                )
-              : h('input', { value: s.model || '', onChange: e => ctx.saveSetting('model', e.target.value), placeholder: 'gpt-4o / claude-3-sonnet...' })
+            h('label', null, '模型名称'),
+            h('input', { 
+              value: s.model || '', 
+              onChange: e => ctx.saveSetting('model', e.target.value), 
+              placeholder: 'gpt-4o, deepseek-chat, claude-3-sonnet',
+              style: { fontSize: '16px' }
+            }),
+            h('div', { className: 'field-hint' }, 
+              '输入你要使用的模型名称，例如: gpt-4o, deepseek-chat'
+            )
           )
         ),
         // Parameters
