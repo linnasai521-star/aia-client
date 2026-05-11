@@ -1,18 +1,24 @@
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Ctx } from '../state.js';
 import { MessageBubble } from './MessageBubble.js';
 import { InputBar } from './InputBar.js';
 import { renderMarkdown } from '../utils/markdown.js';
+import { VisualNovelMode } from './VisualNovelMode.js';
 
 const h = React.createElement;
 
 export function ChatPage() {
   const ctx = useContext(Ctx);
   const msgEnd = useRef(null);
+  const [showVnMode, setShowVnMode] = useState(false);
 
   useEffect(() => {
     msgEnd.current?.scrollIntoView({ behavior: 'smooth' });
   }, [ctx.msgs, ctx.stream]);
+
+  if (showVnMode) {
+    return h(VisualNovelMode, { onClose: () => setShowVnMode(false) });
+  }
 
   if (!ctx.curId) {
     return h(React.Fragment, null,
@@ -38,7 +44,12 @@ export function ChatPage() {
   return h(React.Fragment, null,
     h('header', { className: 'header' },
       h('button', { className: 'btn-icon menu-btn', onClick: () => ctx.setSidebar(true) }, '☰'),
-      h('span', { className: 'header-title' }, convTitle)
+      h('span', { className: 'header-title' }, convTitle),
+      h('button', { 
+        className: 'btn-icon vn-mode-btn',
+        onClick: () => setShowVnMode(true),
+        style: { marginLeft: 'auto', marginRight: '10px' }
+      }, '🎭')
     ),
     h('div', { className: 'chat-area' },
       h('div', { className: 'chat-inner' },
