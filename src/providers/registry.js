@@ -15,12 +15,12 @@ const PROVIDERS = {
 };
 
 export const PRESETS = {
-  openai:      { name: 'OpenAI',      apiUrl: 'https://api.openai.com',            model: 'gpt-4o' },
-  claude:      { name: 'Claude',      apiUrl: 'https://api.anthropic.com',          model: 'claude-3-sonnet-20240229' },
-  gemini:      { name: 'Gemini',      apiUrl: 'https://generativelanguage.googleapis.com', model: 'gemini-pro' },
-  deepseek:    { name: 'DeepSeek',    apiUrl: 'https://api.deepseek.com',           model: 'deepseek-chat' },
-  openrouter:  { name: 'OpenRouter',  apiUrl: 'https://openrouter.ai/api',          model: 'openai/gpt-4o' },
-  siliconflow: { name: 'SiliconFlow', apiUrl: 'https://api.siliconflow.cn',         model: 'deepseek-ai/DeepSeek-V3' },
+  openai:      { name: 'OpenAI',      apiUrl: 'https://api.openai.com',       model: 'gpt-4o' },
+  claude:      { name: 'Claude',      apiUrl: 'https://api.anthropic.com',    model: 'claude-3-5-sonnet-20241022' },
+  gemini:      { name: 'Gemini',      apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash' },
+  deepseek:    { name: 'DeepSeek',    apiUrl: 'https://api.deepseek.com',    model: 'deepseek-chat' },
+  openrouter:  { name: 'OpenRouter',  apiUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o' },
+  siliconflow: { name: 'SiliconFlow', apiUrl: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
 };
 
 export function createProvider(type, cfg) {
