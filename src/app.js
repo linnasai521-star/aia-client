@@ -2,14 +2,17 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Ctx } from './state.js';
 import * as db from './db/indexeddb.js';
+import * as memorydb from './db/memorydb.js';
 import { genId } from './utils/helpers.js';
 import { decryptStr } from './utils/crypto.js';
 import { createProvider } from './providers/registry.js';
 import { processWorldBook } from './utils/worldbook.js';
+import { extractFromConversation, generateSummary, buildMemoryContext } from './utils/memory.js';
 import { Sidebar } from './components/Sidebar.js';
 import { ChatPage } from './components/ChatPage.js';
 import { SettingsPage } from './components/SettingsPage.js';
 import { CharacterPage } from './components/CharacterPage.js';
+import { MemoryPage } from './components/MemoryPage.js';
 import { LockScreen } from './components/LockScreen.js';
 
 const h = React.createElement;
@@ -29,6 +32,7 @@ function App() {
   const [charCard, setCharCard] = useState(null);
   const [wb, setWB] = useState([]);
   const [models, setModels] = useState([]);
+  const [memoryContext, setMemoryContext] = useState('');
   const abortRef = useRef(null);
   const streamRef = useRef('');
 
@@ -125,10 +129,17 @@ function App() {
       await db.putMessage(em); setMsgs(m => [...m, em]); return;
     }
 
-    // Build messages
+    // Build messages with memory context
     const apiMsgs = [];
     let sys = fresh.systemPrompt || 'You are a helpful assistant.';
     if (charCard?.systemPrompt) sys = charCard.systemPrompt;
+    
+    // Inject memory context
+    const memContext = await buildMemoryContext(content, curId);
+    if (memContext) {
+      sys += '\n\n' + memContext;
+    }
+    
     apiMsgs.push({ role: 'system', content: sys });
     const wbContent = processWorldBook(wb, content, parseInt(fresh.wbTokenBudget) || 2000);
     if (wbContent) apiMsgs.push({ role: 'system', content: wbContent });
@@ -151,6 +162,13 @@ function App() {
         async (full) => {
           const am = { id: genId(), convId: curId, role: 'assistant', content: full || '(空响应)', ts: Date.now() };
           await db.putMessage(am); setMsgs(m => [...m, am]); setStream(''); setLoading(false); abortRef.current = null;
+          
+          // Auto-extract memories after response
+          const allMsgsAfter = await db.getAllMessages(curId);
+          if (allMsgsAfter.length % 10 === 0) { // 每10条消息提取一次
+            await extractFromConversation(allMsgsAfter, curId);
+            await generateSummary(allMsgsAfter, curId);
+          }
         },
         async (err) => {
           const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + err.message, ts: Date.now() };
@@ -164,6 +182,13 @@ function App() {
         );
         const am = { id: genId(), convId: curId, role: 'assistant', content: result || '(空响应)', ts: Date.now() };
         await db.putMessage(am); setMsgs(m => [...m, am]);
+        
+        // Auto-extract memories after response
+        const allMsgsAfter = await db.getAllMessages(curId);
+        if (allMsgsAfter.length % 10 === 0) {
+          await extractFromConversation(allMsgsAfter, curId);
+          await generateSummary(allMsgsAfter, curId);
+        }
       } catch (err) {
         const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + err.message, ts: Date.now() };
         await db.putMessage(em); setMsgs(m => [...m, em]);
@@ -203,6 +228,7 @@ function App() {
     charCard, setCharCard,
     wb, setWB,
     models, fetchModels,
+    memoryContext, setMemoryContext,
   };
 
   if (!ready) {
@@ -218,6 +244,7 @@ function App() {
       h('div', { className: 'main' },
         page === 'chat' ? h(ChatPage) :
         page === 'settings' ? h(SettingsPage) :
+        page === 'memory' ? h(MemoryPage) :
         h(CharacterPage)
       ),
       locked ? h(LockScreen) : null
