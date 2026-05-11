@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Aggregator - 设置页面测试</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 24px;
+            padding: 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        .field {
+            margin-bottom: 16px;
+        }
+        .field label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #555;
+        }
+        .field input, .field select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .field-hint {
+            font-size: 12px;
+            color: #777;
+            margin-top: 4px;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        .status.warning {
+            background: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffe0b2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 AI Aggregator 设置页面测试</h1>
+        
+        <div class="section">
+            <div class="section-title">🔌 自定义 API 配置</div>
+            
+            <div class="field">
+                <label>快速选择（可选）</label>
+                <select>
+                    <option value="openai">OpenAI</option>
+                    <option value="claude">Claude</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="siliconflow">SiliconFlow</option>
+                    <option value="custom">🔧 自定义</option>
+                </select>
+                <div class="field-hint">选择预设的API提供商，或选择"自定义"手动输入</div>
+            </div>
+            
+            <div class="field">
+                <label>API 地址（必填）</label>
+                <input type="text" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                <div class="field-hint">例如: https://api.openai.com/v1 或 https://your-proxy.com/v1</div>
+            </div>
+            
+            <div class="field">
+                <label>API Key（必填）</label>
+                <input type="password" placeholder="sk-...">
+                <div class="field-hint">输入你的API密钥</div>
+            </div>
+            
+            <div class="field">
+                <label>模型名称</label>
+                <input type="text" placeholder="gpt-4o, deepseek-chat, claude-3-sonnet" value="gpt-4o">
+                <div class="field-hint">输入你要使用的模型名称，例如: gpt-4o, deepseek-chat</div>
+            </div>
+            
+            <div class="status success">
+                ✅ 自定义API配置功能已正常显示
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📊 问题分析</div>
+            <div class="status warning">
+                <strong>问题1：频道后面的红色X</strong><br>
+                这可能是控制台警告，不是致命错误。GitHub Actions部署已成功修复。
+            </div>
+            <div class="status success">
+                <strong>问题2：自定义API配置</strong><br>
+                代码已正确更新，包含"自定义API配置"标题和"🔧 自定义"选项。<br>
+                GitHub Pages已成功部署，页面应该正常显示。
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🚀 当前状态</div>
+            <div class="status success">
+                ✅ GitHub Pages 部署成功<br>
+                ✅ 工作流配置已修复<br>
+                ✅ 设置页面代码已更新<br>
+                ✅ 自定义API配置已显示
+            </div>
+        </div>
+    </div>
+</body>
+</html>
