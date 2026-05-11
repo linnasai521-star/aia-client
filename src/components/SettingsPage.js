@@ -11,6 +11,8 @@ export function SettingsPage() {
   const ctx = useContext(Ctx);
   const [testResult, setTestResult] = useState(null);
   const [testLoading, setTestLoading] = useState(false);
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [modelList, setModelList] = useState([]);
   const [keyInput, setKeyInput] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [newKW, setNewKW] = useState('');
@@ -28,13 +30,52 @@ export function SettingsPage() {
         key = await decryptStr(s.encryptedKey, s._sessionPin);
       }
       if (!key) throw new Error('请先填写 API Key');
-      const p = createProvider(s.provider || 'openai', { apiUrl: s.apiUrl, apiKey: key, model: s.model });
+      
+      // 自动补全 API 地址
+      let apiUrl = s.apiUrl || '';
+      if (!apiUrl.includes('/v1') && !apiUrl.includes('/chat/completions')) {
+        apiUrl = apiUrl.replace(/\/$/, '') + '/v1';
+        ctx.saveSetting('apiUrl', apiUrl);
+      }
+      
+      const p = createProvider(s.provider || 'openai', { apiUrl, apiKey: key, model: s.model });
       const list = await p.listModels();
       setTestResult({ ok: true, msg: `连接成功！发现 ${list.length} 个模型。` });
+      setModelList(list);
     } catch (err) {
-      setTestResult({ ok: false, msg: err.message });
+      let errorMsg = err.message;
+      if (errorMsg.includes('404')) {
+        errorMsg = 'HTTP 404 - API地址可能不正确。请检查地址是否以 /v1 结尾，或是否需要完整路径如 /v1/chat/completions';
+      }
+      setTestResult({ ok: false, msg: errorMsg });
     }
     setTestLoading(false);
+  };
+
+  const handleFetchModels = async () => {
+    setFetchingModels(true);
+    setModelList([]);
+    try {
+      let key = keyInput || s.apiKey;
+      if (!key && s.encryptedKey && s._sessionPin) {
+        key = await decryptStr(s.encryptedKey, s._sessionPin);
+      }
+      if (!key) throw new Error('请先填写 API Key');
+      
+      let apiUrl = s.apiUrl || '';
+      if (!apiUrl.includes('/v1') && !apiUrl.includes('/chat/completions')) {
+        apiUrl = apiUrl.replace(/\/$/, '') + '/v1';
+        ctx.saveSetting('apiUrl', apiUrl);
+      }
+      
+      const p = createProvider(s.provider || 'openai', { apiUrl, apiKey: key, model: s.model });
+      const list = await p.listModels();
+      setModelList(list);
+      showToast(`获取到 ${list.length} 个模型`, 'success');
+    } catch (err) {
+      showToast('获取模型列表失败: ' + err.message, 'error');
+    }
+    setFetchingModels(false);
   };
 
   const handleSaveKey = async () => {
@@ -74,9 +115,13 @@ export function SettingsPage() {
     ctx.setWB(w => w.map(e => e.id === entry.id ? { ...e, constant: entry.constant } : e));
   };
 
+  const handleBackgroundChange = (bg) => {
+    ctx.saveSetting('customBackground', bg);
+  };
+
   return h(React.Fragment, null,
     h('header', { className: 'header' },
-      h('button', { className: 'btn-icon menu-btn', onClick: () => ctx.setSidebar(true) }, '☰'),
+      h('button', { className: 'btn-icon menu-btn', onClick: () => ctx.setPage('chat') }, '←'),
       h('span', { className: 'header-title' }, '⚙️ 设置')
     ),
     h('div', { className: 'settings-page' },
@@ -146,12 +191,33 @@ export function SettingsPage() {
                 className: 'btn btn-ghost', 
                 onClick: handleTest, 
                 disabled: testLoading 
-              }, testLoading ? '⏳ 测试中...' : '🔍 测试连接')
+              }, testLoading ? '⏳ 测试中...' : '🔍 测试连接'),
+              h('button', { 
+                className: 'btn btn-ghost', 
+                onClick: handleFetchModels, 
+                disabled: fetchingModels 
+              }, fetchingModels ? '⏳ 获取中...' : '📋 获取模型')
             ),
             testResult ? h('div', { 
               className: testResult.ok ? 'test-ok' : 'test-err' 
             }, testResult.msg) : null
           ),
+          
+          // 模型列表显示
+          modelList.length > 0 ? h('div', { className: 'field' },
+            h('label', null, '可用模型列表'),
+            h('div', { className: 'model-list', style: { maxHeight: 200, overflowY: 'auto', border: '1px solid var(--glass-border)', borderRadius: 8, padding: 8 } },
+              modelList.map((model, i) => h('div', { 
+                key: i, 
+                className: 'model-item',
+                style: { padding: '4px 8', cursor: 'pointer', borderBottom: i < modelList.length - 1 ? '1px solid var(--glass-border)' : 'none' },
+                onClick: () => {
+                  ctx.saveSetting('model', model.id || model.name);
+                  showToast(`已选择模型: ${model.id || model.name}`, 'success');
+                }
+              }, model.id || model.name))
+            )
+          ) : null,
           
           // 模型
           h('div', { className: 'field' },
@@ -167,6 +233,45 @@ export function SettingsPage() {
             )
           )
         ),
+        
+        // 背景设置
+        h('div', { className: 'section' },
+          h('div', { className: 'section-title' }, '🎨 背景设置'),
+          h('div', { className: 'field' },
+            h('label', null, '自定义背景'),
+            h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
+              [
+                { label: '默认深色', value: '' },
+                { label: '星空', value: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' },
+                { label: '森林', value: 'linear-gradient(135deg, #134e5e, #71b280)' },
+                { label: '海洋', value: 'linear-gradient(135deg, #2193b0, #6dd5ed)' },
+                { label: '日落', value: 'linear-gradient(135deg, #ff7e5f, #feb47b)' },
+                { label: '极光', value: 'linear-gradient(135deg, #00c6ff, #0072ff)' }
+              ].map(bg => h('button', {
+                key: bg.value,
+                className: `btn btn-ghost ${s.customBackground === bg.value ? 'active' : ''}`,
+                onClick: () => handleBackgroundChange(bg.value),
+                style: { 
+                  background: bg.value || 'var(--bg-secondary)',
+                  color: 'white',
+                  minWidth: 80,
+                  height: 40,
+                  border: s.customBackground === bg.value ? '2px solid var(--accent-primary)' : '1px solid var(--glass-border)'
+                }
+              }, bg.label))
+            )
+          ),
+          h('div', { className: 'field' },
+            h('label', null, '自定义背景色'),
+            h('input', { 
+              type: 'color', 
+              value: s.customBackgroundColor || '#0f1115',
+              onChange: e => ctx.saveSetting('customBackgroundColor', e.target.value),
+              style: { width: '100%', height: 40, border: 'none', borderRadius: 8 }
+            })
+          )
+        ),
+        
         // Parameters
         h('div', { className: 'section' },
           h('div', { className: 'section-title' }, '🎛️ 生成参数'),
