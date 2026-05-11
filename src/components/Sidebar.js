@@ -97,6 +97,15 @@ export function Sidebar() {
       if (isPng) {
         // PNG 角色卡导入
         const arrayBuffer = await file.arrayBuffer();
+        
+        // 将 PNG 文件转换为 base64 URL 作为头像
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const avatarUrl = 'data:image/png;base64,' + btoa(binary);
+        
         const chunks = extractPngTextChunks(arrayBuffer);
         
         let cardData = null;
@@ -124,6 +133,9 @@ export function Sidebar() {
         }
         
         card = parseCardData(cardData);
+        
+        // 设置 PNG 图片作为头像
+        card.avatar = avatarUrl;
         
         // 处理关联的世界书
         if (cardData.data?.character_book || cardData.character_book) {
