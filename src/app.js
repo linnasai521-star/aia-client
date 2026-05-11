@@ -8,12 +8,21 @@ import { decryptStr } from './utils/crypto.js';
 import { createProvider } from './providers/registry.js';
 import { processWorldBook } from './utils/worldbook.js';
 import { extractFromConversation, generateSummary, buildMemoryContext } from './utils/memory.js';
-import { Sidebar } from './components/Sidebar.js';
-import { ChatPage } from './components/ChatPage.js';
+import { ImmersiveSidebar } from './components/ImmersiveSidebar.js';
+import { ImmersiveChatPage } from './components/ImmersiveChatPage.js';
+import { CharacterPanel } from './components/CharacterPanel.js';
 import { SettingsPage } from './components/SettingsPage.js';
 import { CharacterPage } from './components/CharacterPage.js';
 import { MemoryPage } from './components/MemoryPage.js';
 import { LockScreen } from './components/LockScreen.js';
+
+// 导入沉浸式样式
+import './styles/immersive-theme.css';
+import './styles/immersive-sidebar.css';
+import './styles/immersive-chat.css';
+import './styles/immersive-character.css';
+import './styles/visual-novel.css';
+import './styles/chat-layout.css';
 
 const h = React.createElement;
 
@@ -240,13 +249,30 @@ function App() {
 
   return h(Ctx.Provider, { value: ctx },
     h('div', { className: 'app' },
-      h(Sidebar),
+      // 粒子背景
+      h('div', { className: 'particles' },
+        h('div', { className: 'particle' }),
+        h('div', { className: 'particle' }),
+        h('div', { className: 'particle' }),
+        h('div', { className: 'particle' }),
+        h('div', { className: 'particle' })
+      ),
+      
+      // 沉浸式侧边栏
+      h(ImmersiveSidebar),
+      
+      // 主内容区域
       h('div', { className: 'main' },
-        page === 'chat' ? h(ChatPage) :
+        page === 'chat' ? 
+          h('div', { className: 'chat-layout' },
+            h(ImmersiveChatPage),
+            h(CharacterPanel)
+          ) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
         h(CharacterPage)
       ),
+      
       locked ? h(LockScreen) : null
     )
   );
