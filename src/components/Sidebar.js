@@ -222,6 +222,14 @@ export function Sidebar() {
         ),
         h('button', { className: 'new-chat-btn', onClick: ctx.createConv }, '+ 新建对话')
       ),
+      // 移动端返回按钮
+      h('div', { className: 'sidebar-back-btn', style: { padding: '16px', borderBottom: '1px solid var(--glass-border)' } },
+        h('button', { 
+          className: 'btn btn-ghost', 
+          onClick: () => { ctx.setSidebar(false); ctx.setPage('chat'); },
+          style: { width: '100%', justifyContent: 'center' }
+        }, '← 返回聊天')
+      ),
       h('div', { className: 'sidebar-nav' },
         TABS.map(([k, l]) => h('button', {
           key: k,
