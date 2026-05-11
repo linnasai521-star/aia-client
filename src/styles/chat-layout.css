@@ -1,0 +1,58 @@
+/* 聊天布局样式 */
+.chat-layout {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-layout .chat-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.chat-layout .character-panel {
+  position: relative;
+  z-index: 2;
+}
+
+/* 响应式聊天布局 */
+@media (max-width: 1024px) {
+  .chat-layout {
+    flex-direction: column;
+  }
+  
+  .chat-layout .character-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(100%);
+    transition: transform var(--transition-normal);
+    z-index: 100;
+  }
+  
+  .chat-layout .character-panel.open {
+    transform: translateX(0);
+  }
+}
+
+/* VN模式按钮样式 */
+.vn-mode-btn {
+  background: linear-gradient(135deg, rgba(154, 140, 152, 0.2), rgba(201, 173, 167, 0.1));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.vn-mode-btn:hover {
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+  color: var(--bg-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(201, 173, 167, 0.3);
+}
