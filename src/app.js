@@ -16,13 +16,7 @@ import { CharacterPage } from './components/CharacterPage.js';
 import { MemoryPage } from './components/MemoryPage.js';
 import { LockScreen } from './components/LockScreen.js';
 
-// 导入沉浸式样式
-import './styles/immersive-theme.css';
-import './styles/immersive-sidebar.css';
-import './styles/immersive-chat.css';
-import './styles/immersive-character.css';
-import './styles/visual-novel.css';
-import './styles/chat-layout.css';
+// CSS 样式通过 index.html 中的 link 标签加载
 
 const h = React.createElement;
 
