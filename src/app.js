@@ -264,7 +264,8 @@ function App() {
           ) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
-        h(CharacterPage)
+        page === 'character' ? h(CharacterPage) :
+        h(ImmersiveChatPage) // 默认显示沉浸式聊天
       ),
       
       locked ? h(LockScreen) : null
