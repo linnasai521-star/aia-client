@@ -1,0 +1,454 @@
+/* 沉浸式角色状态区域样式 */
+.character-panel {
+  width: 320px;
+  height: 100vh;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-left: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width var(--transition-normal);
+}
+
+.character-panel.collapsed {
+  width: 0;
+  border: none;
+}
+
+/* 角色面板头部 */
+.character-header {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+}
+
+.character-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.character-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.character-toggle:hover {
+  background: var(--glass-border);
+  color: var(--text-primary);
+}
+
+/* 角色信息区域 */
+.character-info {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* 角色头像区域 */
+.character-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.character-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: var(--bg-primary);
+  font-weight: 600;
+  position: relative;
+  animation: avatar-breath 4s ease-in-out infinite;
+  box-shadow: 0 0 0 4px rgba(201, 173, 167, 0.2);
+}
+
+@keyframes avatar-breath {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(201, 173, 167, 0.2), 0 0 20px rgba(201, 173, 167, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(201, 173, 167, 0.1), 0 0 30px rgba(201, 173, 167, 0.2);
+  }
+}
+
+.character-avatar::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary)) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  animation: avatar-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes avatar-glow {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+.character-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.character-title-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: -8px;
+}
+
+/* 角色状态卡片 */
+.character-status-card {
+  background: linear-gradient(135deg, rgba(43, 45, 66, 0.6), rgba(74, 78, 105, 0.4));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.status-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.status-value {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* 情绪状态 */
+.mood-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.mood-indicator {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  animation: mood-pulse 2s ease-in-out infinite;
+}
+
+@keyframes mood-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.mood-indicator.happy {
+  background: linear-gradient(135deg, var(--mood-happy), #ffd6a5);
+}
+
+.mood-indicator.sad {
+  background: linear-gradient(135deg, var(--mood-sad), #a0c4ff);
+}
+
+.mood-indicator.angry {
+  background: linear-gradient(135deg, var(--mood-angry), #ffadad);
+}
+
+.mood-indicator.thoughtful {
+  background: linear-gradient(135deg, var(--mood-thoughtful), #bdb2ff);
+}
+
+.mood-indicator.dependent {
+  background: linear-gradient(135deg, var(--mood-dependent), #ffc6ff);
+}
+
+.mood-text {
+  flex: 1;
+}
+
+.mood-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.mood-value {
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* 好感度系统 */
+.affection-system {
+  margin-bottom: var(--space-lg);
+}
+
+.affection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.affection-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.affection-value {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.affection-bar {
+  height: 8px;
+  background: var(--glass-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.affection-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+  position: relative;
+  overflow: hidden;
+}
+
+.affection-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shine 2s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.affection-fill.low {
+  background: linear-gradient(90deg, var(--affection-low), #ffadad);
+}
+
+.affection-fill.medium {
+  background: linear-gradient(90deg, var(--affection-medium), #ffd6a5);
+}
+
+.affection-fill.high {
+  background: linear-gradient(90deg, var(--affection-high), #caffbf);
+}
+
+.affection-fill.max {
+  background: linear-gradient(90deg, var(--affection-max), #fdffb6);
+}
+
+/* 场景状态 */
+.scene-status {
+  margin-bottom: var(--space-lg);
+}
+
+.scene-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.scene-value {
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  background: linear-gradient(135deg, rgba(154, 140, 152, 0.2), rgba(201, 173, 167, 0.1));
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+
+/* 世界状态 */
+.world-status {
+  margin-bottom: var(--space-lg);
+}
+
+.world-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.world-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.world-tag {
+  background: var(--glass-border);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.world-tag:hover {
+  background: var(--accent-tertiary);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+/* Author Note */
+.author-note {
+  background: linear-gradient(135deg, rgba(43, 45, 66, 0.6), rgba(74, 78, 105, 0.4));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.author-note-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.author-note-content {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* 角色动作按钮 */
+.character-actions {
+  padding: var(--space-lg);
+  border-top: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.character-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: linear-gradient(135deg, rgba(154, 140, 152, 0.2), rgba(201, 173, 167, 0.1));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 0.875rem;
+}
+
+.character-action-btn:hover {
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+  color: var(--bg-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(201, 173, 167, 0.3);
+}
+
+.character-action-btn .icon {
+  font-size: 1.125rem;
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .character-panel {
+    width: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 20;
+  }
+  
+  .character-panel.open {
+    width: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .character-avatar {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+  }
+  
+  .character-name {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .character-info {
+    padding: var(--space-md);
+  }
+  
+  .character-status-card {
+    padding: var(--space-md);
+  }
+}
