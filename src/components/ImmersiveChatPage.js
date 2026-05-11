@@ -2,6 +2,7 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Ctx } from '../state.js';
 import { timeAgo, showToast } from '../utils/helpers.js';
+import { renderMarkdown } from '../utils/markdown.js';
 
 const h = React.createElement;
 
@@ -64,7 +65,12 @@ export function ImmersiveChatPage() {
       className: `message ${msg.role}` 
     },
       h('div', { className: 'message-bubble' },
-        h('div', { className: 'message-content' }, msg.content)
+        isUser
+          ? h('div', { className: 'message-content' }, msg.content)
+          : h('div', {
+              className: 'message-content',
+              dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) }
+            })
       ),
       h('div', { className: 'message-meta' },
         h('span', { className: 'message-time' }, time),
