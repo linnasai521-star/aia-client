@@ -242,7 +242,12 @@ function App() {
   }
 
   return h(Ctx.Provider, { value: ctx },
-    h('div', { className: 'app' },
+    h('div', { 
+      className: 'app',
+      style: {
+        background: settings.customBackground || settings.customBackgroundColor || 'var(--bg-primary)'
+      }
+    },
       // 粒子背景
       h('div', { className: 'particles' },
         h('div', { className: 'particle' }),
