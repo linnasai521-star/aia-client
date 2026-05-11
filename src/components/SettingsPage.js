@@ -21,6 +21,28 @@ export function SettingsPage() {
   const s = ctx.settings;
   const providerList = getProviderList();
 
+  // 自动补全 API 地址
+  const autoCompleteApiUrl = () => {
+    let url = s.apiUrl || '';
+    if (!url) return;
+    
+    // 移除末尾斜杠
+    url = url.replace(/\/+$/, '');
+    
+    // 如果没有 /v1 且没有 /chat/completions，则添加 /v1
+    if (!url.includes('/v1') && !url.includes('/chat/completions')) {
+      url = url + '/v1';
+    }
+    
+    // 如果是 OpenAI 官方地址，确保使用正确的域名
+    if (url.includes('api.openai.com') && !url.startsWith('https://')) {
+      url = 'https://' + url.replace(/^https?:\/\//, '');
+    }
+    
+    ctx.saveSetting('apiUrl', url);
+    showToast('API地址已自动补全', 'success');
+  };
+
   const handleTest = async () => {
     setTestLoading(true);
     setTestResult(null);
@@ -141,8 +163,6 @@ export function SettingsPage() {
                 if (preset) {
                   ctx.saveSetting('apiUrl', preset.apiUrl);
                   ctx.saveSetting('model', preset.model);
-                } else if (e.target.value === 'custom') {
-                  // 清空，让用户自己填
                 }
               }
             }, [
@@ -154,14 +174,30 @@ export function SettingsPage() {
           // API 地址
           h('div', { className: 'field' },
             h('label', null, 'API 地址（必填）'),
-            h('input', { 
-              value: s.apiUrl || '', 
-              onChange: e => ctx.saveSetting('apiUrl', e.target.value), 
-              placeholder: 'https://api.openai.com/v1',
-              style: { fontSize: '16px' } // 防止 iOS 缩放
-            }),
+            h('div', { style: { display: 'flex', gap: 8 } },
+              h('input', { 
+                value: s.apiUrl || '',
+                onChange: e => {
+                  let val = e.target.value;
+                  ctx.saveSetting('apiUrl', val);
+                  // 如果输入的是域名，自动补全 https://
+                  if (val && !val.startsWith('http://') && !val.startsWith('https://') && val.includes('.')) {
+                    if (!val.startsWith('http')) {
+                      ctx.saveSetting('apiUrl', 'https://' + val);
+                    }
+                  }
+                }, 
+                placeholder: 'https://api.openai.com/v1',
+                style: { fontSize: '16px', flex: 1 }
+              }),
+              h('button', { 
+                className: 'btn btn-ghost', 
+                onClick: autoCompleteApiUrl,
+                style: { whiteSpace: 'nowrap' }
+              }, '🔧 补全')
+            ),
             h('div', { className: 'field-hint' }, 
-              '例如: https://api.openai.com/v1 或 https://your-proxy.com/v1'
+              '输入域名自动补全HTTPS，点击"补全"添加/v1。例如: api.openai.com → https://api.openai.com/v1'
             )
           ),
           
@@ -174,7 +210,7 @@ export function SettingsPage() {
                 value: keyInput, 
                 onChange: e => setKeyInput(e.target.value), 
                 placeholder: 'sk-...',
-                style: { fontSize: '16px' } // 防止 iOS 缩放
+                style: { fontSize: '16px' }
               }),
               h('button', { 
                 className: 'btn-icon', 
@@ -210,7 +246,7 @@ export function SettingsPage() {
               modelList.map((model, i) => h('div', { 
                 key: i, 
                 className: 'model-item',
-                style: { padding: '4px 8', cursor: 'pointer', borderBottom: i < modelList.length - 1 ? '1px solid var(--glass-border)' : 'none' },
+                style: { padding: '4px 8px', cursor: 'pointer', borderBottom: i < modelList.length - 1 ? '1px solid var(--glass-border)' : 'none' },
                 onClick: () => {
                   ctx.saveSetting('model', model.id || model.name);
                   showToast(`已选择模型: ${model.id || model.name}`, 'success');
