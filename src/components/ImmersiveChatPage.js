@@ -1,7 +1,6 @@
-// 沉浸式聊天页面组件
+// 沉浸式聊天页面组件 v2.0 - 陪伴感增强
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Ctx } from '../state.js';
-import { timeAgo, showToast } from '../utils/helpers.js';
 import { renderMarkdown } from '../utils/markdown.js';
 
 const h = React.createElement;
@@ -34,7 +33,6 @@ export function ImmersiveChatPage() {
     ctx.sendMsg(inputValue);
     setInputValue('');
     
-    // 模拟打字状态
     setIsTyping(true);
     setTimeout(() => setIsTyping(false), 2000);
   };
@@ -88,19 +86,70 @@ export function ImmersiveChatPage() {
         h('div', { className: 'typing-dot' }),
         h('div', { className: 'typing-dot' })
       ),
-      h('span', null, '正在思考中...')
+      h('span', null, '正在思考...')
     );
   };
 
   const renderEmptyState = () => {
+    const charName = ctx.charCard ? ctx.charCard.name : '';
+    const charAvatar = ctx.charCard?.avatar;
+    const greetings = [
+      '今天也来陪我聊天吗？',
+      '我一直在等你...',
+      '终于等到你了。',
+      '你来啦，我很开心。',
+      '准备好了吗？开始吧。'
+    ];
+    const moods = [
+      { emoji: '😊', text: '开心' },
+      { emoji: '🤔', text: '思考中' },
+      { emoji: '😌', text: '安静' },
+      { emoji: '😴', text: '有点困' }
+    ];
+    const scenes = [
+      '深夜 · 卧室',
+      '雨天 · 咖啡馆',
+      '黄昏 · 海边',
+      '午后 · 图书馆'
+    ];
+    
+    const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+    const randomMood = moods[Math.floor(Math.random() * moods.length)];
+    const randomScene = scenes[Math.floor(Math.random() * scenes.length)];
+
     return h('div', { className: 'empty-chat' },
-      h('div', { className: 'icon' }, '💬'),
-      h('h3', null, '开始对话'),
-      h('p', null, '输入消息与角色开始沉浸式对话，体验真实的角色扮演互动'),
+      // 大头像 + 呼吸光效
+      h('div', { className: 'avatar-glow' },
+        h('div', { className: 'big-avatar' },
+          charAvatar 
+            ? h('img', { src: charAvatar, alt: charName })
+            : charName ? charName[0] : '✨'
+        )
+      ),
+      // 角色名
+      charName && h('div', { 
+        style: { 
+          fontSize: '1.25rem', 
+          color: 'var(--text-primary)',
+          fontWeight: '500',
+          marginTop: '8px',
+          animation: 'fade-slide-up 0.8s ease-out 0.1s both'
+        }
+      }, charName),
+      // 陪伴感文案
+      h('div', { className: 'char-greeting' }, randomGreeting),
+      // 当前情绪
+      h('div', { className: 'char-mood' },
+        h('span', null, randomMood.emoji),
+        h('span', null, randomMood.text)
+      ),
+      // 当前场景
+      h('div', { className: 'char-scene' }, randomScene),
+      // 快速开始按钮
       h('div', { className: 'quick-actions' },
         h('button', { 
           className: 'quick-action-btn',
-          onClick: () => handleQuickAction('你好，很高兴认识你！')
+          onClick: () => handleQuickAction('你好')
         }, '👋 打招呼'),
         h('button', { 
           className: 'quick-action-btn',
@@ -108,7 +157,7 @@ export function ImmersiveChatPage() {
         }, '🌤️ 问候'),
         h('button', { 
           className: 'quick-action-btn',
-          onClick: () => handleQuickAction('能给我讲个故事吗？')
+          onClick: () => handleQuickAction('给我讲个故事')
         }, '📖 听故事')
       )
     );
@@ -125,7 +174,7 @@ export function ImmersiveChatPage() {
   };
 
   return h('div', { className: 'chat-page' },
-    // 聊天头部
+    // 聊天头部 - 弱化为角色信息条
     h('div', { className: 'chat-header' },
       h('div', { className: 'chat-header-left' },
         h('button', { 
@@ -135,10 +184,17 @@ export function ImmersiveChatPage() {
       ),
       h('div', { className: 'chat-header-center' },
         h('div', { className: 'header-title' }, 
-          ctx.charCard ? ctx.charCard.name : 'AI Aggregator'
+          ctx.charCard 
+            ? h(React.Fragment, null,
+                h('span', { className: 'char-name' }, ctx.charCard.name),
+                h('span', { className: 'status-dot' })
+              )
+            : 'AI Aggregator'
         ),
-        ctx.charCard && h('div', { className: 'header-subtitle' }, 
-          ctx.charCard.description?.slice(0, 50) + '...'
+        h('div', { className: 'header-subtitle' }, 
+          ctx.charCard 
+            ? (ctx.charCard.description?.slice(0, 40) + '...')
+            : '选择一个角色开始对话'
         )
       ),
       h('div', { className: 'chat-header-right' },
@@ -162,7 +218,7 @@ export function ImmersiveChatPage() {
       h('div', { ref: messagesEndRef })
     ),
     
-    // 输入区域
+    // 输入区域 - 极简浮空
     h('div', { className: 'input-area' },
       h('div', { className: 'input-container' },
         h('div', { className: 'input-wrapper' },
@@ -171,7 +227,9 @@ export function ImmersiveChatPage() {
             value: inputValue,
             onChange: (e) => setInputValue(e.target.value),
             onKeyDown: handleKeyDown,
-            placeholder: '输入消息... (Enter发送，Shift+Enter换行)',
+            placeholder: ctx.charCard 
+              ? `和${ctx.charCard.name}说些什么...`
+              : '输入你想说的话...',
             rows: 1
           })
         ),
@@ -193,24 +251,6 @@ export function ImmersiveChatPage() {
             '发送'
           )
         )
-      ),
-      h('div', { className: 'quick-actions' },
-        h('button', { 
-          className: 'quick-action-btn',
-          onClick: () => handleQuickAction('Continue')
-        }, '➡️ 继续'),
-        h('button', { 
-          className: 'quick-action-btn',
-          onClick: () => handleQuickAction('/remember')
-        }, '💾 记忆'),
-        h('button', { 
-          className: 'quick-action-btn',
-          onClick: () => handleQuickAction('/summary')
-        }, '📋 总结'),
-        h('button', { 
-          className: 'quick-action-btn',
-          onClick: () => handleQuickAction('/reset')
-        }, '🔄 重置')
       )
     )
   );
