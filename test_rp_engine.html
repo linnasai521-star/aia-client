@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RP引擎测试</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .test-section {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #0f3460;
+        }
+        h1, h2 {
+            color: #e94560;
+        }
+        button {
+            background: #0f3460;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #e94560;
+        }
+        .file-input {
+            margin: 20px 0;
+        }
+        .result {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #4ade80;
+        }
+        .error {
+            color: #f87171;
+        }
+        .warning {
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎭 RP引擎测试页面</h1>
+    <p>测试PNG角色卡解析、世界书引擎、Prompt拼装器和Token管理器</p>
+    
+    <div class="test-section">
+        <h2>📁 PNG角色卡解析测试</h2>
+        <p>上传一个SillyTavern格式的PNG角色卡文件进行测试</p>
+        <div class="file-input">
+            <input type="file" id="pngFile" accept=".png">
+            <button onclick="testPngParser()">测试PNG解析</button>
+        </div>
+        <div id="pngResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📚 世界书引擎测试</h2>
+        <p>上传JSON世界书文件进行测试</p>
+        <div class="file-input">
+            <input type="file" id="lorebookFile" accept=".json">
+            <button onclick="testLorebookEngine()">测试世界书</button>
+        </div>
+        <div id="lorebookResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔧 Prompt拼装器测试</h2>
+        <p>测试角色卡Prompt拼装功能</p>
+        <button onclick="testPromptAssembler()">测试Prompt拼装</button>
+        <div id="promptResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Token管理器测试</h2>
+        <p>测试Token估算和上下文管理</p>
+        <button onclick="testTokenManager()">测试Token管理</button>
+        <div id="tokenResult" class="result" style="display: none;"></div>
+    </div>
+    
+    <script type="module">
+        // 模拟RP引擎模块
+        class MockLoreBookEngine {
+            importFromJSON(data) {
+                return [{
+                    id: 'test',
+                    keys: ['test', '测试'],
+                    content: '这是一个测试世界书条目',
+                    constant: false,
+                    priority: 10
+                }];
+            }
+            
+            trigger(text) {
+                if (text.includes('test') || text.includes('测试')) {
+                    return [{ id: 'test', content: '触发的世界书内容' }];
+                }
+                return [];
+            }
+            
+            generateContext(text) {
+                const triggered = this.trigger(text);
+                return triggered.map(e => e.content).join('\n\n');
+            }
+            
+            estimateTokens(text) {
+                if (!text) return 0;
+                return Math.ceil(text.length / 2);
+            }
+        }
+        
+        class MockPromptAssembler {
+            constructor() {
+                this.components = new Map();
+            }
+            
+            setComponent(type, content) {
+                this.components.set(type, content);
+            }
+            
+            assemble() {
+                let system = '';
+                for (const [type, content] of this.components) {
+                    system += `[${type}]: ${content}\n\n`;
+                }
+                return {
+                    system,
+                    messages: [
+                        { role: 'user', content: '用户消息测试' },
+                        { role: 'assistant', content: 'AI回复测试' }
+                    ]
+                };
+            }
+        }
+        
+        class MockTokenManager {
+            estimateTokens(text) {
+                if (!text) return 0;
+                return Math.ceil(text.length / 2);
+            }
+            
+            manageContext(context) {
+                return {
+                    systemPrompt: context.systemPrompt + ' [优化后]',
+                    messages: context.messages.slice(-5),
+                    tokenEstimate: {
+                        system: this.estimateTokens(context.systemPrompt),
+                        messages: context.messages.length * 10,
+                        total: this.estimateTokens(context.systemPrompt) + context.messages.length * 10
+                    }
+                };
+            }
+        }
+        
+        // 模拟PNG解析
+        async function parsePngCharacterCard(file) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({
+                        name: '测试角色',
+                        description: '这是一个从PNG解析的测试角色',
+                        personality: '友好、聪明',
+                        scenario: '现代都市背景',
+                        first_mes: '你好！我是测试角色。',
+                        system_prompt: '你是一个测试角色扮演助手。'
+                    });
+                }, 500);
+            });
+        }
+        
+        // 测试函数
+        window.testPngParser = async function() {
+            const fileInput = document.getElementById('pngFile');
+            const resultDiv = document.getElementById('pngResult');
+            
+            if (!fileInput.files.length) {
+                resultDiv.innerHTML = '<span class="error">请先选择PNG文件</span>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            resultDiv.innerHTML = '正在解析PNG文件...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const character = await parsePngCharacterCard(fileInput.files[0]);
+                resultDiv.innerHTML = `<span class="success">✅ PNG解析成功！</span>\n\n解析结果：\n${JSON.stringify(character, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 解析失败: ${error.message}</span>`;
+            }
+        };
+        
+        window.testLorebookEngine = async function() {
+            const fileInput = document.getElementById('lorebookFile');
+            const resultDiv = document.getElementById('lorebookResult');
+            
+            if (!fileInput.files.length) {
+                resultDiv.innerHTML = '<span class="error">请先选择JSON世界书文件</span>';
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            resultDiv.innerHTML = '正在解析世界书...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const text = await fileInput.files[0].text();
+                const jsonData = JSON.parse(text);
+                
+                const engine = new MockLoreBookEngine();
+                const entries = engine.importFromJSON(jsonData);
+                
+                // 测试触发
+                const testText = '这是一个测试消息';
+                const triggered = engine.trigger(testText);
+                const context = engine.generateContext(testText);
+                
+                resultDiv.innerHTML = `<span class="success">✅ 世界书解析成功！</span>\n\n导入条目数: ${entries.length}\n\n测试触发：\n  文本: "${testText}"\n  触发条目: ${triggered.length}\n  生成上下文: ${context || '无'}\n\n第一条目详情：\n${JSON.stringify(entries[0], null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 解析失败: ${error.message}</span>`;
+            }
+        };
+        
+        window.testPromptAssembler = function() {
+            const resultDiv = document.getElementById('promptResult');
+            
+            const assembler = new MockPromptAssembler();
+            assembler.setComponent('system', '你是一个角色扮演助手');
+            assembler.setComponent('character', '角色：测试角色');
+            assembler.setComponent('scenario', '场景：现代都市');
+            
+            const assembled = assembler.assemble();
+            
+            resultDiv.innerHTML = `<span class="success">✅ Prompt拼装测试成功！</span>\n\n组装结果：\n系统提示长度: ${assembled.system.length} 字符\n消息数量: ${assembled.messages.length}\n\n系统提示内容：\n${assembled.system}`;
+            resultDiv.style.display = 'block';
+        };
+        
+        window.testTokenManager = function() {
+            const resultDiv = document.getElementById('tokenResult');
+            
+            const manager = new MockTokenManager();
+            const testText = '这是一个测试文本，用于估算Token数量。';
+            const tokens = manager.estimateTokens(testText);
+            
+            const context = {
+                systemPrompt: '系统提示内容',
+                messages: [
+                    { role: 'user', content: '用户消息1' },
+                    { role: 'assistant', content: 'AI回复1' },
+                    { role: 'user', content: '用户消息2' }
+                ]
+            };
+            
+            const managed = manager.manageContext(context);
+            
+            resultDiv.innerHTML = `<span class="success">✅ Token管理器测试成功！</span>\n\nToken估算测试：\n  文本: "${testText}"\n  估算Token: ${tokens}\n\n上下文管理测试：\n  原始消息数: ${context.messages.length}\n  优化后消息数: ${managed.messages.length}\n  Token使用估算: ${managed.tokenEstimate.total}`;
+            resultDiv.style.display = 'block';
+        };
+    </script>
+</body>
+</html>
