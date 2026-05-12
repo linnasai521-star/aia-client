@@ -12,6 +12,7 @@ const PROVIDERS = {
   deepseek: DeepSeekProvider,
   openrouter: OpenRouterProvider,
   siliconflow: BaseProvider,
+  custom: BaseProvider,
 };
 
 export const PRESETS = {
@@ -21,10 +22,11 @@ export const PRESETS = {
   deepseek:    { name: 'DeepSeek',    apiUrl: 'https://api.deepseek.com',    model: 'deepseek-chat' },
   openrouter:  { name: 'OpenRouter',  apiUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o' },
   siliconflow: { name: 'SiliconFlow', apiUrl: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
+  custom:      { name: '自定义 OpenAI Compatible', apiUrl: '', model: '' },
 };
 
 export function createProvider(type, cfg) {
-  const Cls = PROVIDERS[type] || BaseProvider;
+  const Cls = PROVIDERS[type] || PROVIDERS.custom;
   return new Cls(cfg);
 }
 
