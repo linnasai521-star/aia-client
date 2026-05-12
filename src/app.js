@@ -121,14 +121,14 @@ function App() {
     }
 
     // Resolve API key
-    let realKey = fresh.apiKey;
-    if (!realKey && fresh.encryptedKey) {
+    let realKey = apiCfg?.apiKey || "";
+    if (!realKey && apiCfg?.encryptedKey) {
       const pin = settings._sessionPin;
       if (!pin) {
         const em = { id: genId(), convId: curId, role: 'assistant', content: '🔒 请先输入 PIN 解锁。', ts: Date.now() };
         await db.putMessage(em); setMsgs(m => [...m, em]); return;
       }
-      try { realKey = await decryptStr(fresh.encryptedKey, pin); }
+      try { realKey = await decryptStr(apiCfg.encryptedKey, pin); }
       catch { const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ API Key 解密失败。', ts: Date.now() }; await db.putMessage(em); setMsgs(m => [...m, em]); return; }
     }
     if (!realKey) {
