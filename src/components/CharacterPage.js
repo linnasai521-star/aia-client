@@ -1,10 +1,66 @@
-import React, { useContext, useRef, useState, useEffect } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import { Ctx } from '../state.js';
 import { showToast } from '../utils/helpers.js';
 import * as db from '../db/indexeddb.js';
-import { parsePngCharacterCard } from '../utils/pngParser.js';
 
 const h = React.createElement;
+
+// ============================================================
+//  头像组件 - 支持 URL / base64 / blob / 默认首字
+// ============================================================
+function AvatarDisplay({ charCard, size = 80, borderRadius = 20, fontSize = '2rem' }) {
+  const [imgError, setImgError] = useState(false);
+
+  // 检查可能的头像字段
+  const avatarSrc = charCard?.avatar || charCard?.img || charCard?.image || charCard?.avatar_url || '';
+  console.log('[Character] avatar field:', avatarSrc ? avatarSrc.slice(0, 80) : 'empty');
+
+  // 是否为有效可加载的 URL
+  const isValidSrc = avatarSrc && (
+    avatarSrc.startsWith('blob:') ||
+    avatarSrc.startsWith('data:') ||
+    avatarSrc.startsWith('http://') ||
+    avatarSrc.startsWith('https://') ||
+    avatarSrc.startsWith('/')
+  );
+
+  if (isValidSrc && !imgError) {
+    return h('img', {
+      src: avatarSrc,
+      alt: charCard?.name || '?',
+      style: {
+        width: size,
+        height: size,
+        borderRadius,
+        objectFit: 'cover',
+        border: '3px solid var(--accent)',
+        display: 'block',
+      },
+      onError: () => {
+        console.log('[Character] avatar load failed:', avatarSrc.slice(0, 80));
+        setImgError(true);
+      },
+    });
+  }
+
+  // 默认头像：显示角色名首字
+  const initial = (charCard?.name || '?')[0];
+  return h('div', {
+    style: {
+      width: size,
+      height: size,
+      borderRadius,
+      background: 'linear-gradient(135deg, rgba(139,147,255,0.3), rgba(183,153,255,0.2))',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize,
+      fontWeight: '600',
+      color: 'var(--accent-secondary, #8b93ff)',
+      flexShrink: 0,
+    },
+  }, initial);
+}
 
 // ============================================================
 //  EditCharacterForm - 角色卡编辑表单
@@ -48,7 +104,7 @@ function EditCharacterForm({ card, onSave, onCancel }) {
     { key: 'creator', label: '创作者', type: 'input', rows: 1 },
   ];
 
-  return h('div', { style: { padding: '16px' } },
+  return h('div', { style: { padding: '16px', overflowY: 'auto', maxHeight: 'calc(100vh - 120px)' } },
     h('h3', { style: { margin: '0 0 16px', color: 'var(--text-primary)' } }, '✏️ 编辑角色卡'),
     ...fields.map(({ key, label, type, rows }) => {
       const value = Array.isArray(form[key]) ? form[key].join(', ') : (form[key] || '');
@@ -65,11 +121,11 @@ function EditCharacterForm({ card, onSave, onCancel }) {
             type: 'text',
             value,
             style: inputStyle,
-            onChange: e => update(key, key === 'tags' ? e.target.value : e.target.value),
+            onChange: e => update(key, e.target.value),
           })
       );
     }),
-    h('div', { style: { display: 'flex', gap: '10px', marginTop: '20px' } },
+    h('div', { style: { display: 'flex', gap: '10px', marginTop: '20px', paddingBottom: '20px' } },
       h('button', {
         onClick: handleSave,
         style: {
@@ -242,12 +298,7 @@ export function CharacterPage() {
     h('div', { className: 'cc-panel' },
       // 头像和名称
       h('div', { className: 'card-header' },
-        c.avatar ? h('img', {
-          src: c.avatar, alt: c.name,
-          style: { width: 80, height: 80, borderRadius: 20, objectFit: 'cover', border: '3px solid var(--accent)' },
-          onError: (e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }
-        }) : null,
-        h('div', { className: 'card-avatar', style: c.avatar ? { display: 'none' } : { width: 80, height: 80 } }, c.name?.[0] || '?'),
+        h(AvatarDisplay, { charCard: c, size: 80, borderRadius: 20, fontSize: '2rem' }),
         h('div', { style: { marginLeft: '16px', flex: 1 } },
           h('div', { style: { display: 'flex', alignItems: 'center' } },
             h('div', { className: 'card-name', style: { fontSize: '1.25rem' } }, c.name),
