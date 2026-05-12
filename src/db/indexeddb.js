@@ -1,5 +1,5 @@
-const DB_NAME = 'aia-v3';
-const DB_VER = 1;
+const DB_NAME = 'aia-v4';
+const DB_VER = 2;
 let _db = null;
 
 function open() {
@@ -23,6 +23,37 @@ function open() {
         s.createIndex('convId', 'convId');
       }
       if (!d.objectStoreNames.contains('characters')) d.createObjectStore('characters', { keyPath: 'id' });
+      // NEW: API configs store
+      if (!d.objectStoreNames.contains('apiConfigs')) {
+        d.createObjectStore('apiConfigs', { keyPath: 'id' });
+      }
+      // Migrate old settings to apiConfig if exists
+      if (e.oldVersion < 2 && d.objectStoreNames.contains('settings')) {
+        const tx = e.target.transaction;
+        const settingStore = tx.objectStore('settings');
+        const apiStore = tx.objectStore('apiConfigs');
+        const req = settingStore.getAll();
+        req.onsuccess = () => {
+          const all = req.result;
+          const s = {};
+          for (const i of all) s[i.key] = i.value;
+          if (s.apiUrl || s.apiKey) {
+            apiStore.put({
+              id: 'default',
+              name: '默认配置',
+              provider: s.provider || 'openai',
+              baseURL: s.apiUrl || '',
+              apiKey: s.apiKey || '',
+              encryptedKey: s.encryptedKey || '',
+              model: s.model || '',
+              systemPrompt: s.systemPrompt || '',
+              isDefault: true,
+              createdAt: Date.now(),
+              updatedAt: Date.now()
+            });
+          }
+        };
+      }
     };
     req.onsuccess = e => { _db = e.target.result; resolve(_db); };
     req.onerror = e => reject(e.target.error);
@@ -85,6 +116,34 @@ export async function getAllSettings() {
 }
 export async function setSetting(key, value) {
   return r2p((await store('settings', 'readwrite')).put({ key, value }));
+}
+
+// 👇 NEW: API Configs CRUD
+export async function getAllApiConfigs() {
+  return r2p((await store('apiConfigs')).getAll());
+}
+export async function getApiConfig(id) {
+  return r2p((await store('apiConfigs')).get(id));
+}
+export async function putApiConfig(cfg) {
+  cfg.updatedAt = Date.now();
+  return r2p((await store('apiConfigs', 'readwrite')).put(cfg));
+}
+export async function deleteApiConfig(id) {
+  return r2p((await store('apiConfigs', 'readwrite')).delete(id));
+}
+export async function setDefaultApiConfig(id) {
+  const tx = (await open()).transaction('apiConfigs', 'readwrite');
+  const s = tx.objectStore('apiConfigs');
+  const all = await r2p(s.getAll());
+  for (const cfg of all) {
+    cfg.isDefault = cfg.id === id;
+    await r2p(s.put(cfg));
+  }
+}
+export async function getDefaultApiConfig() {
+  const all = await r2p((await store('apiConfigs')).getAll());
+  return all.find(c => c.isDefault) || all[0] || null;
 }
 
 // World book
