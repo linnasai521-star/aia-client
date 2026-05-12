@@ -169,3 +169,17 @@ async function deleteByIndex(storeName, idxName, val) {
     };
   });
 }
+
+
+// API Config status helpers
+export async function updateApiConfigStatus(id, updates) {
+  const cfg = await getApiConfig(id);
+  if (!cfg) return;
+  Object.assign(cfg, updates, { updatedAt: Date.now() });
+  return r2p((await store('apiConfigs', 'readwrite')).put(cfg));
+}
+
+export async function getApiConfigModels(id) {
+  const cfg = await getApiConfig(id);
+  return cfg?.models || [];
+}
