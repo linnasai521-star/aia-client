@@ -19,76 +19,61 @@ const PROVIDER_MODELS = {
 
 function genId() { return 'cfg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6); }
 
+// Auto-detect provider from URL
+function detectProvider(baseURL) {
+  if (!baseURL) return 'openai';
+  const u = baseURL.toLowerCase();
+  if (u.includes('deepseek')) return 'deepseek';
+  if (u.includes('openrouter')) return 'openrouter';
+  if (u.includes('siliconflow')) return 'siliconflow';
+  if (u.includes('anthropic') || u.includes('claude')) return 'claude';
+  if (u.includes('generativelanguage') || u.includes('gemini')) return 'gemini';
+  if (u.includes('openai')) return 'openai';
+  return 'openai';
+}
+
+// Normalize baseURL
+function smartNormalize(url) {
+  if (!url) return '';
+  let clean = url.trim();
+  // If no protocol, add https
+  if (clean && !clean.startsWith('http')) clean = 'https://' + clean;
+  // Remove trailing slash
+  clean = clean.replace(/\/+$/, '');
+  // Remove /chat/completions if present
+  clean = clean.replace(/\/chat\/completions\/?$/, '');
+  // Remove /v1/chat/completions
+  clean = clean.replace(/\/v1\/chat\/completions\/?$/, '/v1');
+  // Add /v1 if not present and domain suggests it needs it
+  if (!clean.endsWith('/v1')) {
+    const knownProviders = ['deepseek.com', 'openai.com', 'openrouter.ai', 'siliconflow.cn'];
+    if (knownProviders.some(p => clean.includes(p))) {
+      clean += '/v1';
+    }
+  }
+  return clean;
+}
+
+// User-friendly error messages
+function friendlyError(err) {
+  const msg = err.message || '';
+  if (msg.includes('401') || msg.includes('403') || msg.includes('unauthorized'))
+    return 'API Key 无效或没有权限，请检查后重新输入。';
+  if (msg.includes('404') || msg.includes('not_found') || msg.includes('not found'))
+    return '接口地址可能填写错误。请检查 Base URL 是否正确。';
+  if (msg.includes('429') || msg.includes('rate'))
+    return '请求过于频繁，请稍后重试。';
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('TypeError'))
+    return '网络连接失败。请检查地址是否正确，或该接口是否支持浏览器访问（CORS）。';
+  if (msg.includes('CORS') || msg.includes('cross-origin') || msg.includes('opaque'))
+    return '该接口不支持浏览器直接访问，请使用支持 CORS 的中转站。';
+  if (msg.includes('HTTP'))
+    return `接口请求失败: ${msg}`;
+  return msg || '未知错误';
+}
+
 function ConfigCard({ cfg, isActive, onUse, onSetDefault, onDelete, onEdit }) {
   const maskedKey = cfg.apiKey ? cfg.apiKey.slice(0,3) + '****' + cfg.apiKey.slice(-4) : '';
-  const [testingId, setTestingId] = useState(null);
-  const [fetchingModelsId, setFetchingModelsId] = useState(null);
-  const [cardResults, setCardResults] = useState({});
-  
-  const handleCardTest = async (cfg) => {
-    setTestingId(cfg.id);
-    setCardResults(r => ({...r, [cfg.id]: null}));
-    try {
-      const { normalizeBaseURL } = await import('../providers/baseProvider.js');
-      const url = normalizeBaseURL(cfg.baseURL || '');
-      if (!url) throw new Error('请填写 API 地址');
-      if (!cfg.apiKey) throw new Error('请填写 API Key');
-      
-      const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
-      const list = await p.listModels();
-      
-      // Update config with new models and status
-      const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
-      const updated = { ...cfg, model: autoModel, models: list, status: 'online', lastTestedAt: Date.now(), lastFetchedModelsAt: Date.now() };
-      await db.putApiConfig(updated);
-      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `连接成功！发现 ${list.length} 个模型，已选择: ${autoModel}` }}));
-      
-      // Refresh configs list
-      const all = await db.getAllApiConfigs();
-      setConfigs(all);
-    } catch (err) {
-      const msg = err.message;
-      let friendly = msg;
-      if (msg.includes('404') || msg.includes('not found')) friendly = '无法连接到接口，请检查 API 地址是否正确。';
-      else if (msg.includes('401') || msg.includes('403')) friendly = 'API Key 无效，请检查密钥。';
-      else if (msg.includes('429')) friendly = '请求过于频繁，请稍后重试。';
-      else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) friendly = '网络连接失败，请检查地址或网络。';
-      
-      const updated = { ...cfg, status: 'error', lastTestedAt: Date.now() };
-      await db.putApiConfig(updated);
-      const all = await db.getAllApiConfigs();
-      setConfigs(all);
-      
-      setCardResults(r => ({...r, [cfg.id]: { ok: false, msg: friendly }}));
-    }
-    setTestingId(null);
-  };
-  
-  const handleCardFetchModels = async (cfg) => {
-    setFetchingModelsId(cfg.id);
-    try {
-      const { normalizeBaseURL } = await import('../providers/baseProvider.js');
-      const url = normalizeBaseURL(cfg.baseURL || '');
-      if (!url) throw new Error('请填写 API 地址');
-      if (!cfg.apiKey) throw new Error('请填写 API Key');
-      
-      const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
-      const list = await p.listModels();
-      
-      // Auto-select first model if none selected
-      const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
-      const updated = { ...cfg, model: autoModel, models: list, lastFetchedModelsAt: Date.now() };
-      await db.putApiConfig(updated);
-      const all = await db.getAllApiConfigs();
-      setConfigs(all);
-      
-      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `获取到 ${list.length} 个模型，已选择: ${autoModel}` }}));
-    } catch (err) {
-      setCardResults(r => ({...r, [cfg.id]: { ok: false, msg: err.message }}));
-    }
-    setFetchingModelsId(null);
-  };
-  
   return h('div', {
     style: {
       background: isActive ? 'rgba(139,147,255,0.04)' : 'rgba(255,255,255,0.02)',
@@ -98,60 +83,33 @@ function ConfigCard({ cfg, isActive, onUse, onSetDefault, onDelete, onEdit }) {
       boxShadow: isActive ? '0 0 20px rgba(139,147,255,0.04)' : 'none',
       position: 'relative'
     },
-    onClick: onUse
+    onClick: () => onEdit(cfg)
   },
     h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' } },
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-        h('span', { style: { fontSize: '1.25rem' } }, 
-          cfg.provider === 'openai' ? '🟢' : cfg.provider === 'deepseek' ? '🔵' : cfg.provider === 'claude' ? '🟣' : '🟡'
+        h('span', { style: { fontSize: '1.25rem' } },
+          cfg.provider === 'openai' ? '🟢' : cfg.provider === 'deepseek' ? '🔵' : cfg.provider === 'claude' ? '🟣' : cfg.provider === 'gemini' ? '🔴' : '🟡'
         ),
         h('div', null,
           h('div', { style: { fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-primary)' } }, cfg.name),
-          h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '1px' } }, cfg.model || '-')
+          h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '1px' } }, cfg.model || '未选择模型')
         )
       ),
       h('div', { style: { display: 'flex', gap: '4px', alignItems: 'center' } },
         cfg.status === 'online' && h('span', { style: { fontSize: '0.625rem', color: '#4ade80', background: 'rgba(74,222,128,0.1)', padding: '2px 8px', borderRadius: '8px' } }, '● 在线'),
-        cfg.status === 'error' && h('span', { style: { fontSize: '0.625rem', color: '#f87171', background: 'rgba(248,113,113,0.1)', padding: '2px 8px', borderRadius: '8px' } }, '● 错误'),
-        cfg.isDefault && h('span', {
-          style: { fontSize: '0.625rem', color: '#fbbf24', background: 'rgba(251,191,36,0.1)', padding: '2px 8px', borderRadius: '8px' }
-        }, '默认'),
-        isActive && h('span', {
-          style: { fontSize: '0.625rem', color: '#4ade80', background: 'rgba(74,222,128,0.1)', padding: '2px 8px', borderRadius: '8px' }
-        }, '使用中')
+        cfg.status === 'error' && h('span', { style: { fontSize: '0.625rem', color: '#f87171', background: 'rgba(248,113,113,0.1)', padding: '2px 8px', borderRadius: '8px' } }, '● 离线'),
+        cfg.isDefault && h('span', { style: { fontSize: '0.625rem', color: '#fbbf24', background: 'rgba(251,191,36,0.1)', padding: '2px 8px', borderRadius: '8px' } }, '默认'),
+        isActive && h('span', { style: { fontSize: '0.625rem', color: '#4ade80', background: 'rgba(74,222,128,0.1)', padding: '2px 8px', borderRadius: '8px' } }, '使用中')
       )
     ),
-    h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '6px', wordBreak: 'break-all' } },
-      cfg.baseURL || '未设置'
-    ),
+    h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' } }, cfg.baseURL || '未设置'),
     h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' } }, maskedKey || '未设置 Key'),
-    cfg.models && cfg.models.length > 0 && h('div', { style: { fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '2px', opacity: 0.5 } },
-      `${cfg.models.length} 个模型可用`
-    ),
-    cardResults[cfg.id] && h('div', {
-      style: {
-        fontSize: '0.625rem', marginTop: '4px', padding: '4px 8px', borderRadius: '6px',
-        background: cardResults[cfg.id].ok ? 'rgba(74,222,128,0.04)' : 'rgba(248,113,113,0.04)',
-        color: cardResults[cfg.id].ok ? 'var(--text-primary)' : 'var(--text-secondary)'
-      }
-    }, cardResults[cfg.id].msg),
+    cfg.models && cfg.models.length > 0 && h('div', { style: { fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '2px', opacity: 0.5 } }, `${cfg.models.length} 个模型可用`),
     h('div', { style: { display: 'flex', gap: '6px', marginTop: '10px', justifyContent: 'flex-end' } },
       h('button', {
-        style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '8px', background: 'transparent', color: testingId === cfg.id ? 'var(--text-muted)' : '#4ade80', cursor: testingId === cfg.id ? 'wait' : 'pointer' },
-        onClick: e => { e.stopPropagation(); handleCardTest(cfg); }
-      }, testingId === cfg.id ? '测试中...' : '测试'),
-      h('button', {
-        style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(139,147,255,0.15)', borderRadius: '8px', background: 'transparent', color: fetchingModelsId === cfg.id ? 'var(--text-muted)' : 'var(--text-accent)', cursor: fetchingModelsId === cfg.id ? 'wait' : 'pointer' },
-        onClick: e => { e.stopPropagation(); handleCardFetchModels(cfg); }
-      }, fetchingModelsId === cfg.id ? '获取中...' : '模型'),
-      !cfg.isDefault && h('button', {
         style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(139,147,255,0.15)', borderRadius: '8px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' },
         onClick: e => { e.stopPropagation(); onSetDefault(cfg.id); }
-      }, '默认'),
-      h('button', {
-        style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' },
-        onClick: e => { e.stopPropagation(); onEdit(cfg); }
-      }, '编辑'),
+      }, '设为默认'),
       h('button', {
         style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(248,113,113,0.2)', borderRadius: '8px', background: 'transparent', color: '#f87171', cursor: 'pointer' },
         onClick: e => { e.stopPropagation(); onDelete(cfg.id); }
@@ -165,28 +123,23 @@ export function SettingsPage() {
   const [configs, setConfigs] = useState([]);
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [showImportExport, setShowImportExport] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState(null);
 
-  const loadConfigs = async () => {
-    const all = await db.getAllApiConfigs();
-    setConfigs(all);
-  };
-
+  const loadConfigs = async () => setConfigs(await db.getAllApiConfigs());
   useEffect(() => { loadConfigs(); }, []);
-
   const currentId = ctx.settings?.currentApiConfigId;
 
   const handleUse = async (id) => {
     await db.setSetting('currentApiConfigId', id);
     ctx.saveSetting('currentApiConfigId', id);
-    showToast('已切换 API 配置', 'success');
+    showToast('已切换配置', 'success');
   };
 
   const handleSetDefault = async (id) => {
     await db.setDefaultApiConfig(id);
     await loadConfigs();
-    showToast('已设为默认配置', 'success');
+    showToast('已设为默认', 'success');
   };
 
   const handleDelete = async (id) => {
@@ -203,212 +156,202 @@ export function SettingsPage() {
   const handleEdit = (cfg) => {
     setEditing(cfg.id);
     setEditForm({ ...cfg });
+    setTestStatus(null);
   };
 
-  const handleSaveEdit = async () => {
+  const handleUrlChange = (val) => {
+    const normalized = smartNormalize(val);
+    const detected = detectProvider(normalized);
+    setEditForm(f => ({
+      ...f,
+      baseURL: normalized,
+      provider: detected,
+      // Clear cache when URL or Provider changes
+      ...(normalized !== f.baseURL || detected !== f.provider ? { models: [], lastFetchedModelsAt: null } : {})
+    }));
+  };
+
+  const handleKeyChange = (val) => {
+    // Clear cache when key changes
+    setEditForm(f => ({
+      ...f,
+      apiKey: val,
+      ...(val !== f.apiKey ? { models: [], lastFetchedModelsAt: null } : {})
+    }));
+  };
+
+  const handleTestAndFetch = async () => {
+    const cfg = editForm;
+    setTesting(true);
+    setTestStatus({ msg: '正在测试连接...', ok: null });
+    try {
+      const url = cfg.baseURL || '';
+      if (!url) throw new Error('请填写 API 地址');
+      if (!cfg.apiKey) throw new Error('请填写 API Key');
+      const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
+      const list = await p.listModels();
+      const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
+      const updated = { ...cfg, model: autoModel, models: list, status: 'online', lastTestedAt: Date.now(), lastFetchedModelsAt: Date.now() };
+      await db.putApiConfig(updated);
+      setEditForm(updated);
+      await loadConfigs();
+      setTestStatus({ msg: `✅ 连接成功！获取到 ${list.length} 个模型，已选择: ${autoModel}`, ok: true });
+    } catch (err) {
+      const fm = friendlyError(err);
+      await db.putApiConfig({ ...cfg, status: 'error', lastTestedAt: Date.now() });
+      await loadConfigs();
+      setTestStatus({ msg: `❌ ${fm}`, ok: false });
+    }
+    setTesting(false);
+  };
+
+  const handleSave = async () => {
     await db.putApiConfig(editForm);
     await loadConfigs();
     setEditing(null);
     showToast('已保存', 'success');
   };
 
-  const handleAddDefault = async () => {
+  const handleAdd = async () => {
     const id = genId();
     const newCfg = {
-      id, name: '新配置', provider: 'openai',
-      baseURL: 'https://api.openai.com', apiKey: '',
-      model: 'gpt-4o', isDefault: false,
+      id, name: '新配置', provider: 'openai', baseURL: 'https://api.openai.com/v1',
+      apiKey: '', model: 'gpt-4o', isDefault: false, models: [],
       createdAt: Date.now(), updatedAt: Date.now()
     };
     await db.putApiConfig(newCfg);
     await loadConfigs();
     setEditing(id);
     setEditForm(newCfg);
-    setShowNewForm(false);
+    setTestStatus(null);
   };
 
-  const handleImport = async () => {
-    try {
-      const text = prompt('粘贴 API 配置 JSON：');
-      if (!text) return;
-      const imported = JSON.parse(text);
-      const arr = Array.isArray(imported) ? imported : [imported];
-      for (const cfg of arr) {
-        await db.putApiConfig({ id: genId(), ...cfg, createdAt: Date.now(), updatedAt: Date.now() });
-      }
-      await loadConfigs();
-      showToast(`已导入 ${arr.length} 个配置`, 'success');
-    } catch (e) { showToast('导入失败: ' + e.message, 'error'); }
-  };
+  // Edit form UI
+  if (editing) {
+    return h('div', { className: 'settings-page' },
+      h('div', { className: 'settings-container' },
+        h('div', { className: 'settings-header' },
+          h('button', { className: 'back-btn', onClick: () => setEditing(null) }, '← 返回'),
+          h('h2', null, editForm.isNew ? '添加 API' : '编辑 API')
+        ),
+        // Provider
+        h('div', { className: 'setting-group' },
+          h('label', null, '服务商'),
+          h('select', {
+            value: editForm.provider || 'openai',
+            onChange: e => setEditForm({...editForm, provider: e.target.value}),
+            className: 'setting-select'
+          }, ...getProviderList().map(p => h('option', { key: p.id, value: p.id }, p.name)))
+        ),
+        // Name
+        h('div', { className: 'setting-group' },
+          h('label', null, '名称'),
+          h('input', {
+            value: editForm.name || '',
+            onChange: e => setEditForm({...editForm, name: e.target.value}),
+            className: 'setting-input',
+            placeholder: 'DeepSeek 主号'
+          })
+        ),
+        // Base URL
+        h('div', { className: 'setting-group' },
+          h('label', null, 'Base URL'),
+          h('input', {
+            value: editForm.baseURL || '',
+            onChange: e => handleUrlChange(e.target.value),
+            className: 'setting-input',
+            placeholder: 'https://api.deepseek.com/v1'
+          }),
+          h('div', { style: { fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '2px' } },
+            '系统会自动修复地址格式（如移除 /chat/completions）')
+        ),
+        // API Key
+        h('div', { className: 'setting-group' },
+          h('label', null, 'API Key'),
+          h('input', {
+            type: 'password',
+            value: editForm.apiKey || '',
+            onChange: e => handleKeyChange(e.target.value),
+            className: 'setting-input',
+            placeholder: 'sk-...'
+          })
+        ),
+        // Model select
+        h('div', { className: 'setting-group' },
+          h('label', null, '模型'),
+          h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+            editForm.models && editForm.models.length > 0
+              ? h('select', {
+                  value: editForm.model || '',
+                  onChange: e => setEditForm({...editForm, model: e.target.value}),
+                  className: 'setting-select',
+                  style: { flex: 1 }
+                },
+                  (editForm.models || []).map(m => h('option', { key: m, value: m }, m))
+                )
+              : h('input', {
+                  value: editForm.model || '',
+                  onChange: e => setEditForm({...editForm, model: e.target.value}),
+                  className: 'setting-input',
+                  placeholder: '请先点击下方按钮获取模型列表',
+                  style: { flex: 1 }
+                })
+          ),
+          editForm.models && editForm.models.length > 0 &&
+            h('div', { style: { fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '2px' } },
+              `${editForm.models.length} 个模型可用`) ||
+            h('div', { style: { fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '2px' } },
+              '获取模型后自动显示下拉列表')
+        ),
+        // Test & Fetch button
+        h('button', {
+          className: 'setting-btn primary',
+          style: { width: '100%', marginBottom: '8px' },
+          onClick: handleTestAndFetch,
+          disabled: testing
+        }, testing ? '⏳ 测试中...' : '🔗 测试连接 & 获取模型'),
+        // Status
+        testStatus && h('div', {
+          style: {
+            padding: '10px 14px', borderRadius: '10px', fontSize: '0.8125rem', marginBottom: '8px',
+            background: testStatus.ok === true ? 'rgba(74,222,128,0.06)' : testStatus.ok === false ? 'rgba(248,113,113,0.06)' : 'rgba(139,147,255,0.04)',
+            border: '1px solid ' + (testStatus.ok === true ? 'rgba(74,222,128,0.12)' : testStatus.ok === false ? 'rgba(248,113,113,0.12)' : 'rgba(139,147,255,0.08)'),
+            color: testStatus.ok === true ? '#4ade80' : testStatus.ok === false ? '#f87171' : 'var(--text-muted)'
+          }
+        }, testStatus.msg),
+        // Save/Cancel
+        h('div', { style: { display: 'flex', gap: '8px' } },
+          h('button', { className: 'setting-btn primary', style: { flex: 1 }, onClick: handleSave }, '保存'),
+          h('button', { className: 'setting-btn', style: { flex: 1 }, onClick: () => setEditing(null) }, '取消'),
+          h('button', {
+            style: { fontSize: '0.6875rem', padding: '6px 10px', border: '1px solid rgba(139,147,255,0.15)', borderRadius: '8px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' },
+            onClick: async () => {
+              await db.setDefaultApiConfig(editForm.id);
+              showToast('已设为默认', 'success');
+            }
+          }, '设为默认')
+        )
+      )
+    );
+  }
 
-  const handleExport = async () => {
-    const exportData = configs.map(({ id, createdAt, updatedAt, ...rest }) => rest);
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'api_configs_backup.json'; a.click();
-    URL.revokeObjectURL(url);
-    showToast('已导出', 'success');
-  };
-
+  // List view
   return h('div', { className: 'settings-page' },
     h('div', { className: 'settings-container' },
       h('div', { className: 'settings-header' },
         h('button', { className: 'back-btn', onClick: () => ctx.setPage('chat') }, '← 返回'),
-        h('h2', null, 'API 配置'),
-        h('button', {
-          style: { fontSize: '0.75rem', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' },
-          onClick: () => setShowImportExport(!showImportExport)
-        }, '📁')
+        h('h2', null, 'API 配置')
       ),
-
-      showImportExport && h('div', { style: { display: 'flex', gap: '8px', marginBottom: '16px' } },
-        h('button', { className: 'setting-btn', style: { flex: 1 }, onClick: handleImport }, '📥 导入'),
-        h('button', { className: 'setting-btn', style: { flex: 1 }, onClick: handleExport }, '📤 导出')
-      ),
-
       configs.length === 0 && h('div', { style: { textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: '0.875rem' } },
-        '暂无 API 配置，点击下方按钮添加。'
-      ),
-
+        '暂无 API 配置，点击下方按钮添加。'),
       h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' } },
-        ...configs.map(cfg =>
-          editing === cfg.id
-            ? h('div', {
-                key: cfg.id,
-                style: { background: 'rgba(255,255,255,0.02)', borderRadius: '16px', padding: '14px 16px', border: '1px solid rgba(139,147,255,0.15)' }
-              },
-                h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-                  h('input', {
-                    value: editForm.name || '',
-                    onChange: e => setEditForm({...editForm, name: e.target.value}),
-                    className: 'setting-input',
-                    placeholder: '配置名称',
-                    style: { borderBottom: '1px solid rgba(255,255,255,0.06)', borderRadius: '0' }
-                  }),
-                  h('select', {
-                    value: editForm.provider || 'openai',
-                    onChange: e => {
-                      const p = { ...editForm, provider: e.target.value };
-                      const rec = PROVIDER_MODELS[e.target.value];
-                      if (rec) p.model = rec[0];
-                      setEditForm(p);
-                    },
-                    className: 'setting-select'
-                  }, ...getProviderList().map(p => h('option', { key: p.id, value: p.id }, p.name)), h('option', { value: 'custom' }, '自定义')),
-                  h('input', {
-                    value: editForm.baseURL || '',
-                    onChange: e => setEditForm({...editForm, baseURL: e.target.value}),
-                    className: 'setting-input',
-                    placeholder: 'https://api.deepseek.com'
-                  }),
-                  h('input', {
-                    type: 'password',
-                    value: editForm.apiKey || '',
-                    onChange: e => setEditForm({...editForm, apiKey: e.target.value}),
-                    className: 'setting-input',
-                    placeholder: 'API Key (留空保留原值)'
-                  }),
-                  h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
-                    h('select', {
-                      value: editForm.model || '',
-                      onChange: e => setEditForm({...editForm, model: e.target.value}),
-                      className: 'setting-select',
-                      style: { flex: 1 }
-                    },
-                      h('option', { value: '' }, '手动输入...'),
-                      (editForm.models && editForm.models.length > 0) && h('optgroup', { label: '已获取的模型' },
-                        ...editForm.models.map(m => h('option', { key: m, value: m }, m))
-                      ),
-                      PROVIDER_MODELS[editForm.provider || sessionStorage.getItem('edit_provider') || 'openai'] && h('optgroup', { label: '推荐模型' },
-                        ...(PROVIDER_MODELS[editForm.provider || sessionStorage.getItem('edit_provider') || 'openai'] || []).map(m => h('option', { key: m, value: m }, m))
-                      )
-                    ),
-                    h('input', {
-                      value: editForm.model || '',
-                      onChange: e => setEditForm({...editForm, model: e.target.value}),
-                      className: 'setting-input',
-                      placeholder: '或手动输入模型名...',
-                      style: { flex: 1 },
-                      list: 'edit-model-suggest'
-                    })
-                  ),
-                  PROVIDER_MODELS[editForm.provider] && h('datalist', { id: 'edit-model-suggest' },
-                    ...PROVIDER_MODELS[editForm.provider].map(m => h('option', { key: m, value: m })),
-                    ...(editForm.models || []).map(m => h('option', { key: m, value: m }))
-                  ),
-                  h('div', { style: { display: 'flex', gap: '6px', margin: '4px 0' } },
-                    h('button', {
-                      style: { fontSize: '0.75rem', padding: '6px', flex: 1, border: '1px solid rgba(74,222,128,0.2)', borderRadius: '8px', background: 'transparent', color: '#4ade80', cursor: 'pointer' },
-                      onClick: () => {
-                        const cfg = editForm;
-                        (async () => {
-                          try {
-                            const { normalizeBaseURL } = await import('../providers/baseProvider.js');
-                            const url = normalizeBaseURL(cfg.baseURL || '');
-                            const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
-                            const list = await p.listModels();
-                            const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
-                            setEditForm({...cfg, model: autoModel, models: list});
-                            await db.putApiConfig({...cfg, model: autoModel, models: list, status: 'online', lastTestedAt: Date.now(), lastFetchedModelsAt: Date.now()});
-                            await loadConfigs();
-                            showToast(`连接成功！获取到 ${list.length} 个模型，已选择: ${autoModel}`, 'success');
-                          } catch (err) {
-                            const msg = err.message;
-                            let fm = msg;
-                            if (msg.includes('404')) fm = '无法连接，请检查地址。';
-                            else if (msg.includes('401')||msg.includes('403')) fm = 'API Key 无效。';
-                            else if (msg.includes('Failed to fetch')) fm = '网络错误。';
-                            showToast(fm, 'error');
-                          }
-                        })();
-                      }
-                    }, '🔗 测试连接'),
-                    h('button', {
-                      style: { fontSize: '0.75rem', padding: '6px', flex: 1, border: '1px solid rgba(139,147,255,0.2)', borderRadius: '8px', background: 'transparent', color: 'var(--text-accent)', cursor: 'pointer' },
-                      onClick: () => {
-                        const cfg = editForm;
-                        (async () => {
-                          try {
-                            const { normalizeBaseURL } = await import('../providers/baseProvider.js');
-                            const url = normalizeBaseURL(cfg.baseURL || '');
-                            const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
-                            const list = await p.listModels();
-                            const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
-                            setEditForm({...cfg, model: autoModel, models: list});
-                            await db.putApiConfig({...cfg, model: autoModel, models: list, lastFetchedModelsAt: Date.now()});
-                            await loadConfigs();
-                            showToast(`获取到 ${list.length} 个模型，已选择: ${autoModel}`, 'success');
-                          } catch (err) { showToast(err.message, 'error'); }
-                        })();
-                      }
-                    }, '📋 获取模型')
-                  ),
-                  editForm.models && editForm.models.length > 0 && h('div', {
-                    style: { fontSize: '0.6875rem', color: 'var(--text-muted)', margin: '4px 0' }
-                  }, `已缓存 ${editForm.models.length} 个模型`),
-                  h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px' } },
-                    h('button', { className: 'setting-btn primary', style: { flex: 1 }, onClick: handleSaveEdit }, '保存'),
-                    h('button', { className: 'setting-btn', style: { flex: 1 }, onClick: () => setEditing(null) }, '取消')
-                  )
-                )
-              )
-            : h(ConfigCard, {
-                key: cfg.id,
-                cfg, isActive: currentId === cfg.id,
-                onUse: () => handleUse(cfg.id),
-                onSetDefault: handleSetDefault,
-                onDelete: handleDelete,
-                onEdit: handleEdit
-              })
-        )
+        ...configs.map(cfg => h(ConfigCard, {
+          key: cfg.id, cfg, isActive: currentId === cfg.id,
+          onUse: handleUse, onSetDefault: handleSetDefault,
+          onDelete: handleDelete, onEdit: handleEdit
+        }))
       ),
-
-      h('button', {
-        className: 'setting-btn',
-        style: { width: '100%', padding: '12px', opacity: showNewForm ? 0.5 : 1 },
-        onClick: handleAddDefault
-      }, '+ 添加 API 配置')
+      h('button', { className: 'setting-btn', style: { width: '100%', padding: '12px' }, onClick: handleAdd }, '+ 添加 API 配置')
     )
   );
 }
