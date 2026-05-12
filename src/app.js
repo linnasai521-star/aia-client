@@ -110,7 +110,11 @@ function App() {
 
     // Get fresh settings
     const fresh = await db.getAllSettings();
-    const apiUrl = fresh.apiUrl;
+        let cfgId = fresh.currentApiConfigId || '';
+    let apiCfg = null;
+    if (cfgId) apiCfg = await db.getApiConfig(cfgId);
+    if (!apiCfg) { apiCfg = await db.getDefaultApiConfig(); }
+    const apiUrl = apiCfg?.baseURL || '';
     if (!apiUrl) {
       const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ 请先在设置中配置 API。', ts: Date.now() };
       await db.putMessage(em); setMsgs(m => [...m, em]); return;
@@ -153,7 +157,7 @@ function App() {
     setStream('');
     streamRef.current = '';
 
-    const provider = createProvider(fresh.provider || 'openai', { apiUrl, apiKey: realKey, model: fresh.model });
+    const provider = createProvider(apiCfg?.provider || fresh.provider || 'openai', { apiUrl, apiKey: realKey, model: apiCfg?.model || cfgModel });
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
@@ -213,7 +217,7 @@ function App() {
   const fetchModels = useCallback(async () => {
     const fresh = await db.getAllSettings();
     if (!fresh.apiUrl) return [];
-    const p = createProvider(fresh.provider || 'openai', { apiUrl: fresh.apiUrl, apiKey: fresh.apiKey, model: fresh.model });
+    const p = createProvider(apiCfg?.provider || fresh.provider || 'openai', { apiUrl: fresh.apiUrl, apiKey: fresh.apiKey, model: apiCfg?.model || cfgModel });
     try { const list = await p.listModels(); setModels(list); return list; }
     catch { return []; }
   }, []);
