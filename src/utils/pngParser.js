@@ -109,7 +109,7 @@ async function extractPngMetadata(arrayBuffer) {
   return metadata;
 }
 
-// --- tEXt：未压缩文本，Latin-1 编码 ---
+// --- tEXt：文本，自动检测 UTF-8 / Latin-1 编码 ---
 function extractTextChunk(view, offset, length) {
   const result = {};
 
@@ -118,7 +118,10 @@ function extractTextChunk(view, offset, length) {
   while (nullIdx < offset + length && view.getUint8(nullIdx) !== 0) nullIdx++;
 
   const keyword = readLatin1(view, offset, nullIdx);
-  const text = readLatin1(view, nullIdx + 1, offset + length);
+  const textBytes = readBytes(view, nullIdx + 1, offset + length);
+
+  // 自动编码检测：先尝试 UTF-8，如果有替换字符则回退到 Latin-1
+  const text = smartDecodeText(textBytes);
 
   result[keyword] = text;
   return result;
@@ -194,10 +197,10 @@ async function extractZTxtChunk(view, offset, length) {
 
   try {
     const decompressed = await decompressDeflate(compressedBytes);
-    result[keyword] = new TextDecoder('latin1').decode(decompressed);
+    // 解压后也用智能解码
+    result[keyword] = smartDecodeText(decompressed);
   } catch (err) {
     console.warn('[PNGParser] zTXt decompress failed:', err);
-    // 回退：尝试直接 latin-1 读取
     result[keyword] = new TextDecoder('latin1').decode(compressedBytes);
   }
 
@@ -231,6 +234,33 @@ async function decompressDeflate(uint8Array) {
     pos += chunk.length;
   }
   return result;
+}
+
+// ============================================================
+//  智能编码检测
+// ============================================================
+
+/**
+ * 智能解码文本：先尝试 UTF-8，如果有替换字符则回退到 Latin-1
+ * 解决很多 PNG 角色卡的 tEXt chunk 实际使用 UTF-8 编码（虽然违反 PNG 规范）
+ */
+function smartDecodeText(uint8Array) {
+  if (!uint8Array || uint8Array.length === 0) return '';
+
+  // 先尝试 UTF-8 解码
+  const utf8Text = new TextDecoder('utf-8').decode(uint8Array);
+
+  // 检查是否包含替换字符（U+FFFD）
+  if (!utf8Text.includes('\uFFFD')) {
+    // UTF-8 解码成功，没有替换字符
+    console.log('[PNGParser] tEXt decoded with: UTF-8');
+    return utf8Text;
+  }
+
+  // UTF-8 解码失败（有替换字符），回退到 Latin-1
+  const latin1Text = new TextDecoder('latin1').decode(uint8Array);
+  console.log('[PNGParser] tEXt decoded with: Latin-1 (UTF-8 had replacement chars)');
+  return latin1Text;
 }
 
 // ============================================================
