@@ -157,7 +157,8 @@ function App() {
     setStream('');
     streamRef.current = '';
 
-    const provider = createProvider(apiCfg?.provider || fresh.provider || 'openai', { apiUrl, apiKey: realKey, model: apiCfg?.model || cfgModel });
+    const cfgModel = apiCfg?.model || 'gpt-4o';
+    const provider = createProvider(apiCfg?.provider || fresh.provider || 'openai', { apiUrl, apiKey: realKey, model: cfgModel });
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
