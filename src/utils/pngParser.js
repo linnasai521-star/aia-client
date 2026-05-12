@@ -25,15 +25,6 @@ export async function parsePngCharacterCard(pngFile) {
         console.log('[PNGParser] ccv3 exists:', !!metadata.ccv3);
         console.log('[PNGParser] character exists:', !!metadata.character);
         const result = parseCharacterMetadata(metadata);
-        console.log('[PNGParser] Final result preview:', {
-          name: result.name,
-          personality: (result.personality || '').slice(0, 60),
-          first_mes: (result.first_mes || '').slice(0, 60),
-          scenario: (result.scenario || '').slice(0, 60),
-          tags: result.tags,
-          hasWorldbook: !!(result.worldbook && result.worldbook.length),
-          system_prompt: (result.system_prompt || '').slice(0, 60),
-        });
         resolve(result);
       } catch (error) {
         console.error('[PNGParser] Parse failed:', error);
@@ -54,6 +45,23 @@ export function getCharacterCardVersion(metadata) {
   if (metadata.chara) return 'v2';
   if (metadata.character) return 'v1';
   return 'unknown';
+}
+
+// ============================================================
+//  编码检测工具
+// ============================================================
+
+/**
+ * 检测字节是否为有效的 UTF-8 编码
+ * 使用 fatal: true 模式，无效 UTF-8 会抛出异常
+ */
+function isValidUtf8(bytes) {
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return !text.includes('\uFFFD');
+  } catch (e) {
+    return false;
+  }
 }
 
 // ============================================================
@@ -117,13 +125,23 @@ function extractTextChunk(view, offset, length) {
   let nullIdx = offset;
   while (nullIdx < offset + length && view.getUint8(nullIdx) !== 0) nullIdx++;
 
+  // keyword 总是 Latin-1 编码
   const keyword = readLatin1(view, offset, nullIdx);
   const textBytes = readBytes(view, nullIdx + 1, offset + length);
 
-  // 自动编码检测：先尝试 UTF-8，如果有替换字符则回退到 Latin-1
-  const text = smartDecodeText(textBytes);
+  console.log('[PNGParser] tEXt keyword:', keyword, 'length:', textBytes.length);
 
-  result[keyword] = text;
+  // 智能编码检测：先尝试 UTF-8，如果无效则回退到 Latin-1
+  if (isValidUtf8(textBytes)) {
+    const text = new TextDecoder('utf-8').decode(textBytes);
+    console.log('[PNGParser] tEXt decoded with: UTF-8');
+    result[keyword] = text;
+  } else {
+    const text = new TextDecoder('latin1').decode(textBytes);
+    console.log('[PNGParser] tEXt decoded with: Latin-1');
+    result[keyword] = text;
+  }
+
   return result;
 }
 
@@ -161,14 +179,31 @@ async function extractITxtChunk(view, offset, length) {
     // 已压缩，需要解压
     try {
       const decompressed = await decompressDeflate(rawBytes);
-      result[keyword] = new TextDecoder('utf-8').decode(decompressed);
+      // iTXt 规范要求使用 UTF-8
+      if (isValidUtf8(decompressed)) {
+        result[keyword] = new TextDecoder('utf-8').decode(decompressed);
+        console.log('[PNGParser] iTXt decompressed with: UTF-8');
+      } else {
+        result[keyword] = new TextDecoder('latin1').decode(decompressed);
+        console.log('[PNGParser] iTXt decompressed with: Latin-1 (UTF-8 invalid)');
+      }
     } catch (err) {
       console.warn('[PNGParser] iTXt decompress failed, trying raw:', err);
-      result[keyword] = new TextDecoder('utf-8').decode(rawBytes);
+      if (isValidUtf8(rawBytes)) {
+        result[keyword] = new TextDecoder('utf-8').decode(rawBytes);
+      } else {
+        result[keyword] = new TextDecoder('latin1').decode(rawBytes);
+      }
     }
   } else {
-    // 未压缩，直接 UTF-8 解码
-    result[keyword] = new TextDecoder('utf-8').decode(rawBytes);
+    // 未压缩，优先 UTF-8 解码
+    if (isValidUtf8(rawBytes)) {
+      result[keyword] = new TextDecoder('utf-8').decode(rawBytes);
+      console.log('[PNGParser] iTXt decoded with: UTF-8');
+    } else {
+      result[keyword] = new TextDecoder('latin1').decode(rawBytes);
+      console.log('[PNGParser] iTXt decoded with: Latin-1');
+    }
   }
 
   return result;
@@ -197,11 +232,22 @@ async function extractZTxtChunk(view, offset, length) {
 
   try {
     const decompressed = await decompressDeflate(compressedBytes);
-    // 解压后也用智能解码
-    result[keyword] = smartDecodeText(decompressed);
+    // 解压后智能检测编码
+    if (isValidUtf8(decompressed)) {
+      result[keyword] = new TextDecoder('utf-8').decode(decompressed);
+      console.log('[PNGParser] zTXt decompressed with: UTF-8');
+    } else {
+      result[keyword] = new TextDecoder('latin1').decode(decompressed);
+      console.log('[PNGParser] zTXt decompressed with: Latin-1');
+    }
   } catch (err) {
     console.warn('[PNGParser] zTXt decompress failed:', err);
-    result[keyword] = new TextDecoder('latin1').decode(compressedBytes);
+    // 回退：尝试直接读取
+    if (isValidUtf8(compressedBytes)) {
+      result[keyword] = new TextDecoder('utf-8').decode(compressedBytes);
+    } else {
+      result[keyword] = new TextDecoder('latin1').decode(compressedBytes);
+    }
   }
 
   return result;
@@ -234,33 +280,6 @@ async function decompressDeflate(uint8Array) {
     pos += chunk.length;
   }
   return result;
-}
-
-// ============================================================
-//  智能编码检测
-// ============================================================
-
-/**
- * 智能解码文本：先尝试 UTF-8，如果有替换字符则回退到 Latin-1
- * 解决很多 PNG 角色卡的 tEXt chunk 实际使用 UTF-8 编码（虽然违反 PNG 规范）
- */
-function smartDecodeText(uint8Array) {
-  if (!uint8Array || uint8Array.length === 0) return '';
-
-  // 先尝试 UTF-8 解码
-  const utf8Text = new TextDecoder('utf-8').decode(uint8Array);
-
-  // 检查是否包含替换字符（U+FFFD）
-  if (!utf8Text.includes('\uFFFD')) {
-    // UTF-8 解码成功，没有替换字符
-    console.log('[PNGParser] tEXt decoded with: UTF-8');
-    return utf8Text;
-  }
-
-  // UTF-8 解码失败（有替换字符），回退到 Latin-1
-  const latin1Text = new TextDecoder('latin1').decode(uint8Array);
-  console.log('[PNGParser] tEXt decoded with: Latin-1 (UTF-8 had replacement chars)');
-  return latin1Text;
 }
 
 // ============================================================
@@ -298,6 +317,7 @@ function tryBase64Decode(str) {
   // 方法 2：标准 base64 解码
   try {
     const decoded = atob(str);
+    // atob 解码后直接 JSON.parse，JSON.parse 本身就支持 Unicode
     try {
       const parsed = JSON.parse(decoded);
       if (typeof parsed === 'object') {
@@ -370,7 +390,7 @@ function parseCharacterMetadata(metadata) {
   }
 
   // 确保所有字段都存在，统一命名
-  return {
+  const finalResult = {
     name: result.name || '未知角色',
     description: result.description || '',
     personality: result.personality || '',
@@ -388,4 +408,14 @@ function parseCharacterMetadata(metadata) {
     worldbook: result.worldbook || result.character_book || [],
     _raw: metadata,
   };
+
+  // 调试日志：显示解析结果
+  console.log('[PNGParser] Character name:', finalResult.name);
+  console.log('[PNGParser] first_mes preview:', finalResult.first_mes ? finalResult.first_mes.substring(0, 50) : 'empty');
+  console.log('[PNGParser] personality preview:', finalResult.personality ? finalResult.personality.substring(0, 50) : 'empty');
+  console.log('[PNGParser] scenario preview:', finalResult.scenario ? finalResult.scenario.substring(0, 50) : 'empty');
+  console.log('[PNGParser] tags:', finalResult.tags);
+  console.log('[PNGParser] hasWorldbook:', !!(finalResult.worldbook && finalResult.worldbook.length));
+
+  return finalResult;
 }
