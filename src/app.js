@@ -217,7 +217,11 @@ function App() {
   const fetchModels = useCallback(async () => {
     const fresh = await db.getAllSettings();
     if (!fresh.apiUrl) return [];
-    const p = createProvider(apiCfg?.provider || fresh.provider || 'openai', { apiUrl: fresh.apiUrl, apiKey: fresh.apiKey, model: apiCfg?.model || cfgModel });
+    let fCfgId = fresh.currentApiConfigId || '';
+    let fCfg = null;
+    if (fCfgId) fCfg = await db.getApiConfig(fCfgId);
+    if (!fCfg) fCfg = await db.getDefaultApiConfig();
+    const p = createProvider(fCfg?.provider || fresh.provider || 'openai', { apiUrl: fCfg?.baseURL || fresh.apiUrl, apiKey: fCfg?.apiKey || fresh.apiKey, model: fCfg?.model || fresh.model || 'gpt-4o' });
     try { const list = await p.listModels(); setModels(list); return list; }
     catch { return []; }
   }, []);
