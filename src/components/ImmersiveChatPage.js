@@ -50,12 +50,30 @@ export function ImmersiveChatPage() {
   const renderMessage = msg => {
     const iu = msg.role === 'user';
     const t = new Date(msg.ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    return h('div', { key: msg.id, className: `message ${msg.role}` },
-      h('div', { className: 'message-bubble' },
-        iu ? h('div', { className: 'message-content' }, msg.content)
-          : h('div', { className: 'message-content', dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } })
+    const cn = ctx.charCard?.name || 'AI';
+    const ca = ctx.charCard?.avatar;
+    
+    if (iu) {
+      return h('div', { key: msg.id, className: 'message user' },
+        h('div', { className: 'message-bubble' },
+          h('div', { className: 'message-content' }, msg.content)
+        ),
+        h('div', { className: 'message-meta' }, h('span', { className: 'message-time' }, t), h('span', { className: 'message-status' }, '✓✓'))
+      );
+    }
+    
+    const isReplying = ctx.loading && msg === ctx.msgs[ctx.msgs.length-1];
+    return h('div', { key: msg.id, className: 'message assistant' },
+      h('div', { className: 'ai-avatar-wrap' },
+        h('div', { className: 'char-avatar-small' + (isReplying ? ' replying' : ''), style: { flexShrink: 0 } },
+          ca ? h('img', { src: ca, alt: cn }) : h('span', null, cn[0] || 'AI'),
+          h('span', { className: 'status-dot-sm' })
+        ),
+        h('div', { className: 'message-bubble' },
+          h('div', { className: 'message-content', dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } })
+        )
       ),
-      h('div', { className: 'message-meta' }, h('span', { className: 'message-time' }, t), iu && h('span', { className: 'message-status' }, '✓✓'))
+      h('div', { className: 'message-meta' }, h('span', { className: 'message-time' }, t))
     );
   };
 
@@ -128,9 +146,13 @@ export function ImmersiveChatPage() {
             rows: 1
           })
         ),
-        h('div', { className: 'input-actions' },
-          h('button', { className: 'input-btn secondary', onClick: () => ctx.stopStream(), disabled: !ctx.loading }, h('span', { className: 'icon' }, '⏹️'), '停止'),
-          h('button', { className: 'input-btn primary', onClick: handleSend, disabled: !inputValue.trim() || ctx.loading }, h('span', { className: 'icon' }, '➤'), '发送')
+        h('div', { className: 'input-actions', style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+          h('button', { className: 'stop-btn', onClick: () => ctx.stopStream(), disabled: !ctx.loading },
+            h('span', { style: { fontSize: '0.75rem' } }, '⏹')
+          ),
+          h('button', { className: 'send-btn', onClick: handleSend, disabled: !inputValue.trim() || ctx.loading },
+            h('span', null, '➤')
+          )
         )
       )
     )
