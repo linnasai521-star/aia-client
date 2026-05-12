@@ -304,74 +304,60 @@ function readBytes(view, from, to) {
 
 function tryBase64Decode(str) {
   if (!str || typeof str !== 'string') return str;
-
-  // 方法 1：直接 JSON.parse（可能已经是明文 JSON）
-  if (str.trim().startsWith('{') || str.trim().startsWith('[')) {
-    try {
-      const parsed = JSON.parse(str);
-      if (typeof parsed === 'object') {
-        console.log('[PNGParser] tryBase64Decode: method=directJSON, name=' + (parsed.name || 'N/A'));
-        return parsed;
-      }
-    } catch (_) { /* 继续 */ }
+  if (typeof str === 'object') return str;
+  
+  // 尝试 URL 安全 base64 转标准 base64
+  function fixBase64(s) {
+    return s.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
   }
-
-  // 方法 2：标准 atob 解码
-  try {
-    const decoded = atob(str.trim());
-    if (decoded.startsWith('{') || decoded.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(decoded);
-        if (typeof parsed === 'object') {
-          console.log('[PNGParser] tryBase64Decode: method=atob+JSON, name=' + (parsed.name || 'N/A'));
-          return parsed;
-        }
-      } catch (_) {}
-    }
-  } catch (_) { /* 不是标准 base64 */ }
-
-  // 方法 3：URL 安全 base64（- → +, _ → /）
-  try {
-    const fixed = str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
-    const padded = fixed + '='.repeat((4 - fixed.length % 4) % 4);
-    const decoded = atob(padded);
-    if (decoded.startsWith('{') || decoded.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(decoded);
-        if (typeof parsed === 'object') {
-          console.log('[PNGParser] tryBase64Decode: method=urlSafeBase64+JSON, name=' + (parsed.name || 'N/A'));
-          return parsed;
-        }
-      } catch (_) {}
-    }
-  } catch (_) { /* 继续 */ }
-
-  // 方法 4：atob 后 UTF-8 二进制转换（关键！处理中文）
-  // atob() 把每个字节映射为 Latin-1 字符码点
-  // 但实际数据是 UTF-8 编码的，需要用 Uint8Array 还原真实字节
-  try {
-    const fixed = str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
-    const padded = fixed + '='.repeat((4 - fixed.length % 4) % 4);
-    const binary = atob(padded);
+  
+  // 核心方法：atob \u2192 Uint8Array \u2192 TextDecoder(utf-8) \u2192 JSON.parse
+  function base64ToUtf8Json(fixed) {
+    const binary = atob(fixed);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);
     }
     const utf8 = new TextDecoder('utf-8').decode(bytes);
-    if (utf8.trim().startsWith('{') || utf8.trim().startsWith('[')) {
-      try {
-        const parsed = JSON.parse(utf8);
-        if (typeof parsed === 'object') {
-          console.log('[PNGParser] tryBase64Decode: method=atob+utf8Bytes+JSON, name=' + (parsed.name || 'N/A'));
-          return parsed;
-        }
-      } catch (_) {}
+    return JSON.parse(utf8);
+  }
+  
+  // 1. 尝试直接 JSON.parse\uff08已经是明文 JSON\uff09
+  try {
+    if (str.trim().startsWith('{')) {
+      const obj = JSON.parse(str);
+      if (obj && obj.name) {
+        console.log('[PNGParser] method=direct-json');
+        return obj;
+      }
     }
-  } catch (_) { /* 继续 */ }
-
-  console.log('[PNGParser] tryBase64Decode: all methods failed for string of length ' + str.length);
+  } catch(e) {}
+  
+  // 2. 标准 base64 \u2192 UTF-8 \u2192 JSON
+  try {
+    const obj = base64ToUtf8Json(str.trim());
+    console.log('[PNGParser] method=atob-utf8-json');
+    return obj;
+  } catch(e) {}
+  
+  // 3. URL 安全 base64 \u2192 UTF-8 \u2192 JSON
+  try {
+    const obj = base64ToUtf8Json(fixBase64(str));
+    console.log('[PNGParser] method=urlsafe-atob-utf8-json');
+    return obj;
+  } catch(e) {}
+  
+  // 4. 最后兜底：atob + JSON.parse\uff08仅用于ASCII内容\uff09
+  try {
+    const decoded = atob(fixBase64(str));
+    const obj = JSON.parse(decoded);
+    console.log('[PNGParser] method=atob-json-fallback');
+    return obj;
+  } catch(e) {}
+  
   return str;
 }
+
 // ============================================================
 //  角色元数据解析
 // ============================================================
