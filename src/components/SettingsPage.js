@@ -337,7 +337,57 @@ export function SettingsPage() {
                     ...PROVIDER_MODELS[editForm.provider].map(m => h('option', { key: m, value: m })),
                     ...(editForm.models || []).map(m => h('option', { key: m, value: m }))
                   ),
-                  h('div', { style: { display: 'flex', gap: '8px', marginTop: '4px' } },
+                  h('div', { style: { display: 'flex', gap: '6px', margin: '4px 0' } },
+                    h('button', {
+                      style: { fontSize: '0.75rem', padding: '6px', flex: 1, border: '1px solid rgba(74,222,128,0.2)', borderRadius: '8px', background: 'transparent', color: '#4ade80', cursor: 'pointer' },
+                      onClick: () => {
+                        const cfg = editForm;
+                        (async () => {
+                          try {
+                            const { normalizeBaseURL } = await import('../providers/baseProvider.js');
+                            const url = normalizeBaseURL(cfg.baseURL || '');
+                            const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
+                            const list = await p.listModels();
+                            const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
+                            setEditForm({...cfg, model: autoModel, models: list});
+                            await db.putApiConfig({...cfg, model: autoModel, models: list, status: 'online', lastTestedAt: Date.now(), lastFetchedModelsAt: Date.now()});
+                            await loadConfigs();
+                            showToast(`连接成功！获取到 ${list.length} 个模型，已选择: ${autoModel}`, 'success');
+                          } catch (err) {
+                            const msg = err.message;
+                            let fm = msg;
+                            if (msg.includes('404')) fm = '无法连接，请检查地址。';
+                            else if (msg.includes('401')||msg.includes('403')) fm = 'API Key 无效。';
+                            else if (msg.includes('Failed to fetch')) fm = '网络错误。';
+                            showToast(fm, 'error');
+                          }
+                        })();
+                      }
+                    }, '🔗 测试连接'),
+                    h('button', {
+                      style: { fontSize: '0.75rem', padding: '6px', flex: 1, border: '1px solid rgba(139,147,255,0.2)', borderRadius: '8px', background: 'transparent', color: 'var(--text-accent)', cursor: 'pointer' },
+                      onClick: () => {
+                        const cfg = editForm;
+                        (async () => {
+                          try {
+                            const { normalizeBaseURL } = await import('../providers/baseProvider.js');
+                            const url = normalizeBaseURL(cfg.baseURL || '');
+                            const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
+                            const list = await p.listModels();
+                            const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
+                            setEditForm({...cfg, model: autoModel, models: list});
+                            await db.putApiConfig({...cfg, model: autoModel, models: list, lastFetchedModelsAt: Date.now()});
+                            await loadConfigs();
+                            showToast(`获取到 ${list.length} 个模型，已选择: ${autoModel}`, 'success');
+                          } catch (err) { showToast(err.message, 'error'); }
+                        })();
+                      }
+                    }, '📋 获取模型')
+                  ),
+                  editForm.models && editForm.models.length > 0 && h('div', {
+                    style: { fontSize: '0.6875rem', color: 'var(--text-muted)', margin: '4px 0' }
+                  }, `已缓存 ${editForm.models.length} 个模型`),
+                  h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px' } },
                     h('button', { className: 'setting-btn primary', style: { flex: 1 }, onClick: handleSaveEdit }, '保存'),
                     h('button', { className: 'setting-btn', style: { flex: 1 }, onClick: () => setEditing(null) }, '取消')
                   )
