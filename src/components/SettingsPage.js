@@ -38,9 +38,10 @@ function ConfigCard({ cfg, isActive, onUse, onSetDefault, onDelete, onEdit }) {
       const list = await p.listModels();
       
       // Update config with new models and status
-      const updated = { ...cfg, models: list, status: 'online', lastTestedAt: Date.now(), lastFetchedModelsAt: Date.now() };
+      const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
+      const updated = { ...cfg, model: autoModel, models: list, status: 'online', lastTestedAt: Date.now(), lastFetchedModelsAt: Date.now() };
       await db.putApiConfig(updated);
-      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `连接成功！发现 ${list.length} 个模型。` }}));
+      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `连接成功！发现 ${list.length} 个模型，已选择: ${autoModel}` }}));
       
       // Refresh configs list
       const all = await db.getAllApiConfigs();
@@ -74,12 +75,14 @@ function ConfigCard({ cfg, isActive, onUse, onSetDefault, onDelete, onEdit }) {
       const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
       const list = await p.listModels();
       
-      const updated = { ...cfg, models: list, lastFetchedModelsAt: Date.now() };
+      // Auto-select first model if none selected
+      const autoModel = cfg.model || (list.length > 0 ? list[0] : '');
+      const updated = { ...cfg, model: autoModel, models: list, lastFetchedModelsAt: Date.now() };
       await db.putApiConfig(updated);
       const all = await db.getAllApiConfigs();
       setConfigs(all);
       
-      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `获取到 ${list.length} 个模型。` }}));
+      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `获取到 ${list.length} 个模型，已选择: ${autoModel}` }}));
     } catch (err) {
       setCardResults(r => ({...r, [cfg.id]: { ok: false, msg: err.message }}));
     }
@@ -306,15 +309,33 @@ export function SettingsPage() {
                     className: 'setting-input',
                     placeholder: 'API Key (留空保留原值)'
                   }),
-                  h('input', {
-                    value: editForm.model || '',
-                    onChange: e => setEditForm({...editForm, model: e.target.value}),
-                    className: 'setting-input',
-                    placeholder: '模型名称',
-                    list: 'edit-model-suggest'
-                  }),
+                  h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+                    h('select', {
+                      value: editForm.model || '',
+                      onChange: e => setEditForm({...editForm, model: e.target.value}),
+                      className: 'setting-select',
+                      style: { flex: 1 }
+                    },
+                      h('option', { value: '' }, '手动输入...'),
+                      (editForm.models && editForm.models.length > 0) && h('optgroup', { label: '已获取的模型' },
+                        ...editForm.models.map(m => h('option', { key: m, value: m }, m))
+                      ),
+                      PROVIDER_MODELS[editForm.provider || sessionStorage.getItem('edit_provider') || 'openai'] && h('optgroup', { label: '推荐模型' },
+                        ...(PROVIDER_MODELS[editForm.provider || sessionStorage.getItem('edit_provider') || 'openai'] || []).map(m => h('option', { key: m, value: m }, m))
+                      )
+                    ),
+                    h('input', {
+                      value: editForm.model || '',
+                      onChange: e => setEditForm({...editForm, model: e.target.value}),
+                      className: 'setting-input',
+                      placeholder: '或手动输入模型名...',
+                      style: { flex: 1 },
+                      list: 'edit-model-suggest'
+                    })
+                  ),
                   PROVIDER_MODELS[editForm.provider] && h('datalist', { id: 'edit-model-suggest' },
-                    ...PROVIDER_MODELS[editForm.provider].map(m => h('option', { key: m, value: m }))
+                    ...PROVIDER_MODELS[editForm.provider].map(m => h('option', { key: m, value: m })),
+                    ...(editForm.models || []).map(m => h('option', { key: m, value: m }))
                   ),
                   h('div', { style: { display: 'flex', gap: '8px', marginTop: '4px' } },
                     h('button', { className: 'setting-btn primary', style: { flex: 1 }, onClick: handleSaveEdit }, '保存'),
