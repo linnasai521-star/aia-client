@@ -1,8 +1,17 @@
 /**
  * PNG Character Card Parser
- * 解析Tavern格式PNG元数据（tEXt、iTXt、zTXt chunks）
- * CRITICAL: Tavern PNG的chara字段是base64编码的JSON
+ * 解析 Tavern 格式 PNG 元数据（tEXt / iTXt / zTXt chunks）
+ * 
+ * 兼容格式：
+ *   - Tavern V1: character 字段
+ *   - Tavern V2: chara 字段 (base64 编码的 JSON)
+ *   - Chub/CharacterHub: ccv3 字段
+ *   - 普通 JSON 角色卡
  */
+
+// ============================================================
+//  公开 API
+// ============================================================
 
 export async function parsePngCharacterCard(pngFile) {
   return new Promise((resolve, reject) => {
@@ -11,11 +20,23 @@ export async function parsePngCharacterCard(pngFile) {
       try {
         const arrayBuffer = e.target.result;
         const metadata = await extractPngMetadata(arrayBuffer);
+        console.log('[PNGParser] Raw metadata keys:', Object.keys(metadata));
+        console.log('[PNGParser] chara exists:', !!metadata.chara);
+        console.log('[PNGParser] ccv3 exists:', !!metadata.ccv3);
+        console.log('[PNGParser] character exists:', !!metadata.character);
         const result = parseCharacterMetadata(metadata);
-        console.log('[PNGParser] Parsed metadata:', Object.keys(metadata));
-        console.log('[PNGParser] Result preview:', {name:result.name, desc:result.description?.slice(0,50), personality:result.personality?.slice(0,50), scenario:result.scenario?.slice(0,50), first_mes:result.first_mes?.slice(0,50), tags:result.tags, hasWorldbook:!!(result.worldbook?.length)});
+        console.log('[PNGParser] Final result preview:', {
+          name: result.name,
+          personality: (result.personality || '').slice(0, 60),
+          first_mes: (result.first_mes || '').slice(0, 60),
+          scenario: (result.scenario || '').slice(0, 60),
+          tags: result.tags,
+          hasWorldbook: !!(result.worldbook && result.worldbook.length),
+          system_prompt: (result.system_prompt || '').slice(0, 60),
+        });
         resolve(result);
       } catch (error) {
+        console.error('[PNGParser] Parse failed:', error);
         reject(error);
       }
     };
@@ -24,134 +45,301 @@ export async function parsePngCharacterCard(pngFile) {
   });
 }
 
+export function isSillyTavernCharacterCard(metadata) {
+  return !!(metadata.chara || metadata.ccv3 || metadata.character || metadata.tavern);
+}
+
+export function getCharacterCardVersion(metadata) {
+  if (metadata.ccv3) return 'v3';
+  if (metadata.chara) return 'v2';
+  if (metadata.character) return 'v1';
+  return 'unknown';
+}
+
+// ============================================================
+//  PNG 二进制解析
+// ============================================================
+
+const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+
 async function extractPngMetadata(arrayBuffer) {
-  const dataView = new DataView(arrayBuffer);
-  const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+  const view = new DataView(arrayBuffer);
+
+  // 验证 PNG 签名
   for (let i = 0; i < 8; i++) {
-    if (dataView.getUint8(i) !== signature[i]) throw new Error('不是有效的PNG文件');
+    if (view.getUint8(i) !== PNG_SIGNATURE[i]) {
+      throw new Error('不是有效的 PNG 文件');
+    }
   }
+
   let offset = 8;
   const metadata = {};
-  while (offset < arrayBuffer.byteLength) {
-    const length = dataView.getUint32(offset); offset += 4;
+
+  while (offset + 8 <= arrayBuffer.byteLength) {
+    const length = view.getUint32(offset);
+    offset += 4;
+
     const chunkType = String.fromCharCode(
-      dataView.getUint8(offset), dataView.getUint8(offset+1),
-      dataView.getUint8(offset+2), dataView.getUint8(offset+3)
-    ); offset += 4;
-    if (chunkType === 'tEXt') Object.assign(metadata, extractTextChunk(dataView, offset, length));
-    else if (chunkType === 'iTXt') Object.assign(metadata, extractITxtChunk(dataView, offset, length));
-    else if (chunkType === 'zTXt') Object.assign(metadata, await extractZTxtChunk(dataView, offset, length));
+      view.getUint8(offset),
+      view.getUint8(offset + 1),
+      view.getUint8(offset + 2),
+      view.getUint8(offset + 3)
+    );
+    offset += 4;
+
+    console.log('[PNGParser] Found chunk:', chunkType, 'length:', length);
+
+    if (chunkType === 'tEXt') {
+      const data = extractTextChunk(view, offset, length);
+      Object.assign(metadata, data);
+    } else if (chunkType === 'iTXt') {
+      const data = await extractITxtChunk(view, offset, length);
+      Object.assign(metadata, data);
+    } else if (chunkType === 'zTXt') {
+      const data = await extractZTxtChunk(view, offset, length);
+      Object.assign(metadata, data);
+    }
+
+    // 跳过数据 + CRC（4字节）
     offset += length + 4;
+
     if (chunkType === 'IEND') break;
   }
+
   return metadata;
 }
 
-function extractTextChunk(dataView, offset, length) {
+// --- tEXt：未压缩文本，Latin-1 编码 ---
+function extractTextChunk(view, offset, length) {
   const result = {};
-  let nullIndex = offset;
-  while (nullIndex < offset + length && dataView.getUint8(nullIndex) !== 0) nullIndex++;
-  const keywordBytes = []; for (let i=offset; i<nullIndex; i++) keywordBytes.push(dataView.getUint8(i));
-  const keyword = new TextDecoder().decode(new Uint8Array(keywordBytes));
-  const textBytes = []; for (let i=nullIndex+1; i<offset+length; i++) textBytes.push(dataView.getUint8(i));
-  const text = new TextDecoder('latin1').decode(new Uint8Array(textBytes));
+
+  // 找 keyword 与 text 之间的 null 分隔符
+  let nullIdx = offset;
+  while (nullIdx < offset + length && view.getUint8(nullIdx) !== 0) nullIdx++;
+
+  const keyword = readLatin1(view, offset, nullIdx);
+  const text = readLatin1(view, nullIdx + 1, offset + length);
+
   result[keyword] = text;
   return result;
 }
 
-function extractITxtChunk(dataView, offset, length) {
+// --- iTXt：可能压缩也可能未压缩 ---
+async function extractITxtChunk(view, offset, length) {
   const result = {};
-  let nullIndex = offset;
-  while (nullIndex < offset + length && dataView.getUint8(nullIndex) !== 0) nullIndex++;
-  const keywordBytes = []; for (let i=offset; i<nullIndex; i++) keywordBytes.push(dataView.getUint8(i));
-  const keyword = new TextDecoder().decode(new Uint8Array(keywordBytes));
-  let currentPos = nullIndex + 2;
-  while (currentPos < offset + length && dataView.getUint8(currentPos) !== 0) currentPos++; currentPos++;
-  while (currentPos < offset + length && dataView.getUint8(currentPos) !== 0) currentPos++; currentPos++;
-  const textBytes = []; for (let i=currentPos; i<offset+length; i++) textBytes.push(dataView.getUint8(i));
-  const text = new TextDecoder().decode(new Uint8Array(textBytes));
-  result[keyword] = text;
+  const end = offset + length;
+
+  // keyword（null 终止）
+  let nullIdx = offset;
+  while (nullIdx < end && view.getUint8(nullIdx) !== 0) nullIdx++;
+  const keyword = readLatin1(view, offset, nullIdx);
+
+  // compression flag（1 byte）：0=未压缩, 1=zlib 压缩
+  let pos = nullIdx + 1;
+  const compressionFlag = view.getUint8(pos);
+  pos += 1;
+
+  // compression method（1 byte）：0=deflate
+  const compressionMethod = view.getUint8(pos);
+  pos += 1;
+
+  // language tag（null 终止，可跳过）
+  while (pos < end && view.getUint8(pos) !== 0) pos++;
+  pos++;
+
+  // translated keyword（null 终止，可跳过）
+  while (pos < end && view.getUint8(pos) !== 0) pos++;
+  pos++;
+
+  // 剩余全部是 text 数据
+  const rawBytes = readBytes(view, pos, end);
+
+  if (compressionFlag === 1 && rawBytes.length > 0) {
+    // 已压缩，需要解压
+    try {
+      const decompressed = await decompressDeflate(rawBytes);
+      result[keyword] = new TextDecoder('utf-8').decode(decompressed);
+    } catch (err) {
+      console.warn('[PNGParser] iTXt decompress failed, trying raw:', err);
+      result[keyword] = new TextDecoder('utf-8').decode(rawBytes);
+    }
+  } else {
+    // 未压缩，直接 UTF-8 解码
+    result[keyword] = new TextDecoder('utf-8').decode(rawBytes);
+  }
+
   return result;
 }
 
-async function extractZTxtChunk(dataView, offset, length) {
+// --- zTXt：zlib (deflate) 压缩文本 ---
+async function extractZTxtChunk(view, offset, length) {
   const result = {};
-  let nullIndex = offset;
-  while (nullIndex < offset + length && dataView.getUint8(nullIndex) !== 0) nullIndex++;
-  const keywordBytes = []; for (let i=offset; i<nullIndex; i++) keywordBytes.push(dataView.getUint8(i));
-  const keyword = new TextDecoder().decode(new Uint8Array(keywordBytes));
-  const compressedData = []; for (let i=nullIndex+2; i<offset+length; i++) compressedData.push(dataView.getUint8(i));
+  const end = offset + length;
+
+  // keyword（null 终止）
+  let nullIdx = offset;
+  while (nullIdx < end && view.getUint8(nullIdx) !== 0) nullIdx++;
+  const keyword = readLatin1(view, offset, nullIdx);
+
+  // compression method（1 byte）
+  const compressionMethod = view.getUint8(nullIdx + 1);
+
+  // 压缩数据从 nullIdx+2 开始
+  const compressedBytes = readBytes(view, nullIdx + 2, end);
+
+  if (compressedBytes.length === 0) {
+    result[keyword] = '';
+    return result;
+  }
+
   try {
-    const ds = new DecompressionStream('deflate');
-    const writer = ds.writable.getWriter(); writer.write(new Uint8Array(compressedData)); writer.close();
-    const reader = ds.readable.getReader(); const chunks = [];
-    while (true) { const {done,value}=await reader.read(); if(done)break; chunks.push(value); }
-    const decompressed = new Uint8Array(chunks.reduce((a,c)=>a+c.length,0));
-    let pos=0; for(const c of chunks){decompressed.set(c,pos);pos+=c.length;}
-    result[keyword] = new TextDecoder().decode(decompressed);
-  } catch(e) {
-    const textBytes = []; for (let i=nullIndex+2; i<offset+length; i++) textBytes.push(dataView.getUint8(i));
-    result[keyword] = new TextDecoder('latin1').decode(new Uint8Array(textBytes));
+    const decompressed = await decompressDeflate(compressedBytes);
+    result[keyword] = new TextDecoder('latin1').decode(decompressed);
+  } catch (err) {
+    console.warn('[PNGParser] zTXt decompress failed:', err);
+    // 回退：尝试直接 latin-1 读取
+    result[keyword] = new TextDecoder('latin1').decode(compressedBytes);
+  }
+
+  return result;
+}
+
+// ============================================================
+//  解压缩工具
+// ============================================================
+
+async function decompressDeflate(uint8Array) {
+  const ds = new DecompressionStream('deflate');
+  const writer = ds.writable.getWriter();
+  const reader = ds.readable.getReader();
+
+  writer.write(uint8Array);
+  writer.close();
+
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+
+  const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
+  const result = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, pos);
+    pos += chunk.length;
   }
   return result;
 }
 
-// CRITICAL: Base64解码（Tavern PNG的chara字段是base64编码的JSON）
+// ============================================================
+//  读取辅助
+// ============================================================
+
+function readLatin1(view, from, to) {
+  const bytes = [];
+  for (let i = from; i < to; i++) bytes.push(view.getUint8(i));
+  return new TextDecoder('latin1').decode(new Uint8Array(bytes));
+}
+
+function readBytes(view, from, to) {
+  const bytes = [];
+  for (let i = from; i < to; i++) bytes.push(view.getUint8(i));
+  return new Uint8Array(bytes);
+}
+
+// ============================================================
+//  Base64 解码（Tavern PNG 的 chara 字段是 base64 编码的 JSON）
+// ============================================================
+
 function tryBase64Decode(str) {
   if (!str || typeof str !== 'string') return str;
+
+  // 方法 1：直接尝试 JSON.parse（有些工具存储原始 JSON）
   try {
-    // 尝试标准base64解码
-    const decoded = atob(str);
-    // 检查解码后是否为有效JSON
-    if (decoded.startsWith('{') || decoded.startsWith('[')) {
-      return JSON.parse(decoded);
+    const parsed = JSON.parse(str);
+    if (typeof parsed === 'object') {
+      console.log('[PNGParser] tryBase64Decode: direct JSON.parse succeeded');
+      return parsed;
     }
-    return decoded;
-  } catch(e) {
-    // 不是base64，返回原始字符串
-    return str;
-  }
+  } catch (_) { /* 不是原始 JSON，继续 */ }
+
+  // 方法 2：标准 base64 解码
+  try {
+    const decoded = atob(str);
+    try {
+      const parsed = JSON.parse(decoded);
+      if (typeof parsed === 'object') {
+        console.log('[PNGParser] tryBase64Decode: standard base64 succeeded, keys:', Object.keys(parsed));
+        return parsed;
+      }
+    } catch (_) {
+      // 解码后不是 JSON，返回解码字符串
+      return decoded;
+    }
+  } catch (_) { /* 不是标准 base64 */ }
+
+  // 方法 3：URL 安全 base64（把 - → +, _ → /）
+  try {
+    const urlSafe = str.replace(/-/g, '+').replace(/_/g, '/');
+    // 补齐 padding
+    const padded = urlSafe + '='.repeat((4 - urlSafe.length % 4) % 4);
+    const decoded = atob(padded);
+    try {
+      const parsed = JSON.parse(decoded);
+      if (typeof parsed === 'object') {
+        console.log('[PNGParser] tryBase64Decode: URL-safe base64 succeeded, keys:', Object.keys(parsed));
+        return parsed;
+      }
+    } catch (_) {
+      return decoded;
+    }
+  } catch (_) { /* 也不是 URL-safe base64 */ }
+
+  // 全部失败，返回原始字符串
+  console.log('[PNGParser] tryBase64Decode: all methods failed for string of length', str.length);
+  return str;
 }
 
+// ============================================================
+//  角色元数据解析
+// ============================================================
+
 function parseCharacterMetadata(metadata) {
-  console.log('[PNGParser] Raw metadata keys:', Object.keys(metadata));
-  
   const result = {
     name: '', description: '', personality: '', scenario: '',
-    first_mes: '', mes_example: '', creator_notes: '', system_prompt: '',
-    post_history_instructions: '', alternate_greetings: [], tags: [],
-    creator: '', character_version: '', extensions: {}, worldbook: [],
-    _raw: metadata
+    first_mes: '', mes_example: '', creator_notes: '',
+    system_prompt: '', post_history_instructions: '',
+    alternate_greetings: [], tags: [],
+    creator: '', character_version: '',
+    extensions: {}, worldbook: [],
+    _raw: metadata,
   };
 
-  // CRITICAL: 处理chara字段 - Tavern PNG的chara是base64编码的JSON
-  if (metadata.chara) {
-    const decoded = tryBase64Decode(metadata.chara);
-    if (typeof decoded === 'object') {
-      console.log('[PNGParser] Decoded chara (base64->JSON):', Object.keys(decoded));
-      Object.assign(result, decoded);
-    }
-  }
-  
-  // 处理ccv3字段 (V3格式，也可能是base64)
-  if (metadata.ccv3) {
-    const decoded = tryBase64Decode(metadata.ccv3);
-    if (typeof decoded === 'object') {
-      console.log('[PNGParser] Decoded ccv3:', Object.keys(decoded));
-      if (decoded.data) Object.assign(result, decoded.data);
-      if (decoded.name) result.name = decoded.name;
-    }
-  }
-  
-  // 处理character字段 (V1格式)
-  if (metadata.character && !result.name) {
-    const decoded = tryBase64Decode(metadata.character);
-    if (typeof decoded === 'object') {
-      Object.assign(result, decoded);
+  // 按优先级处理不同格式
+  const cardFields = ['chara', 'ccv3', 'character', 'tavern'];
+
+  for (const field of cardFields) {
+    if (metadata[field]) {
+      const decoded = tryBase64Decode(metadata[field]);
+      if (typeof decoded === 'object' && decoded !== null) {
+        console.log('[PNGParser] Decoded', field + ', keys:', Object.keys(decoded));
+
+        // ccv3 格式有 data 子对象
+        if (decoded.data && typeof decoded.data === 'object') {
+          Object.assign(result, decoded.data);
+          if (decoded.name) result.name = decoded.name;
+        } else {
+          Object.assign(result, decoded);
+        }
+        // 找到有效数据后停止
+        if (result.name) break;
+      }
     }
   }
 
-  // 确保所有字段都存在
+  // 确保所有字段都存在，统一命名
   return {
     name: result.name || '未知角色',
     description: result.description || '',
@@ -168,17 +356,6 @@ function parseCharacterMetadata(metadata) {
     character_version: result.character_version || result.characterVersion || '',
     extensions: result.extensions || {},
     worldbook: result.worldbook || result.character_book || [],
-    _raw: metadata
+    _raw: metadata,
   };
-}
-
-export function isSillyTavernCharacterCard(metadata) {
-  return !!(metadata.chara || metadata.ccv3 || metadata.character || metadata.tavern);
-}
-
-export function getCharacterCardVersion(metadata) {
-  if (metadata.ccv3) return 'v3';
-  if (metadata.chara) return 'v2';
-  if (metadata.character) return 'v1';
-  return 'unknown';
 }
