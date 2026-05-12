@@ -14,7 +14,8 @@ const PROVIDER_MODELS = {
   claude: ['claude-3-5-sonnet-20241022','claude-3-haiku-20240307'],
   gemini: ['gemini-2.0-flash','gemini-1.5-pro'],
   openrouter: ['openai/gpt-4o','anthropic/claude-3.5-sonnet'],
-  siliconflow: ['deepseek-ai/DeepSeek-V3','deepseek-ai/DeepSeek-R1']
+  siliconflow: ['deepseek-ai/DeepSeek-V3','deepseek-ai/DeepSeek-R1'],
+  custom: []
 };
 
 function genId() { return 'cfg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6); }
@@ -106,13 +107,16 @@ export function SettingsPage() {
   const handleUse = async (id) => {
     await db.setSetting('currentApiConfigId', id);
     ctx.saveSetting('currentApiConfigId', id);
+    await loadConfigs();
     showToast('已切换配置', 'success');
   };
 
   const handleSetDefault = async (id) => {
     await db.setDefaultApiConfig(id);
+    await db.setSetting('currentApiConfigId', id);
+    ctx.saveSetting('currentApiConfigId', id);
     await loadConfigs();
-    showToast('已设为默认', 'success');
+    showToast('已设为默认，聊天将使用此配置', 'success');
   };
 
   const handleDelete = async (id) => {
@@ -134,12 +138,13 @@ export function SettingsPage() {
 
   const handleUrlChange = (val) => {
     const normalized = smartNormalize(val);
-    const detected = detectProvider(normalized);
+    const isCustom = editForm.provider === 'custom';
+    const detected = isCustom ? 'custom' : detectProvider(normalized);
     setEditForm(f => ({
       ...f,
       baseURL: normalized,
       provider: detected,
-      ...(normalized !== f.baseURL || detected !== f.provider ? { models: [], lastFetchedModelsAt: null } : {})
+      ...(normalized !== f.baseURL ? { models: [], lastFetchedModelsAt: null } : {})
     }));
   };
 
@@ -205,6 +210,12 @@ export function SettingsPage() {
     await loadConfigs();
     setEditing(null);
     showToast('已保存', 'success');
+    // Auto-use if first config
+    const all = await db.getAllApiConfigs();
+    if (all.length <= 1) {
+      await db.setSetting('currentApiConfigId', id);
+      ctx.saveSetting('currentApiConfigId', id);
+    }
   };
 
   const handleAdd = async () => {
