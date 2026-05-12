@@ -21,6 +21,71 @@ function genId() { return 'cfg_' + Date.now().toString(36) + '_' + Math.random()
 
 function ConfigCard({ cfg, isActive, onUse, onSetDefault, onDelete, onEdit }) {
   const maskedKey = cfg.apiKey ? cfg.apiKey.slice(0,3) + '****' + cfg.apiKey.slice(-4) : '';
+  const [testingId, setTestingId] = useState(null);
+  const [fetchingModelsId, setFetchingModelsId] = useState(null);
+  const [cardResults, setCardResults] = useState({});
+  
+  const handleCardTest = async (cfg) => {
+    setTestingId(cfg.id);
+    setCardResults(r => ({...r, [cfg.id]: null}));
+    try {
+      const { normalizeBaseURL } = await import('../providers/baseProvider.js');
+      const url = normalizeBaseURL(cfg.baseURL || '');
+      if (!url) throw new Error('请填写 API 地址');
+      if (!cfg.apiKey) throw new Error('请填写 API Key');
+      
+      const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
+      const list = await p.listModels();
+      
+      // Update config with new models and status
+      const updated = { ...cfg, models: list, status: 'online', lastTestedAt: Date.now(), lastFetchedModelsAt: Date.now() };
+      await db.putApiConfig(updated);
+      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `连接成功！发现 ${list.length} 个模型。` }}));
+      
+      // Refresh configs list
+      const all = await db.getAllApiConfigs();
+      setConfigs(all);
+    } catch (err) {
+      const msg = err.message;
+      let friendly = msg;
+      if (msg.includes('404') || msg.includes('not found')) friendly = '无法连接到接口，请检查 API 地址是否正确。';
+      else if (msg.includes('401') || msg.includes('403')) friendly = 'API Key 无效，请检查密钥。';
+      else if (msg.includes('429')) friendly = '请求过于频繁，请稍后重试。';
+      else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) friendly = '网络连接失败，请检查地址或网络。';
+      
+      const updated = { ...cfg, status: 'error', lastTestedAt: Date.now() };
+      await db.putApiConfig(updated);
+      const all = await db.getAllApiConfigs();
+      setConfigs(all);
+      
+      setCardResults(r => ({...r, [cfg.id]: { ok: false, msg: friendly }}));
+    }
+    setTestingId(null);
+  };
+  
+  const handleCardFetchModels = async (cfg) => {
+    setFetchingModelsId(cfg.id);
+    try {
+      const { normalizeBaseURL } = await import('../providers/baseProvider.js');
+      const url = normalizeBaseURL(cfg.baseURL || '');
+      if (!url) throw new Error('请填写 API 地址');
+      if (!cfg.apiKey) throw new Error('请填写 API Key');
+      
+      const p = createProvider(cfg.provider || 'openai', { apiUrl: url, apiKey: cfg.apiKey, model: cfg.model || 'gpt-4o' });
+      const list = await p.listModels();
+      
+      const updated = { ...cfg, models: list, lastFetchedModelsAt: Date.now() };
+      await db.putApiConfig(updated);
+      const all = await db.getAllApiConfigs();
+      setConfigs(all);
+      
+      setCardResults(r => ({...r, [cfg.id]: { ok: true, msg: `获取到 ${list.length} 个模型。` }}));
+    } catch (err) {
+      setCardResults(r => ({...r, [cfg.id]: { ok: false, msg: err.message }}));
+    }
+    setFetchingModelsId(null);
+  };
+  
   return h('div', {
     style: {
       background: isActive ? 'rgba(139,147,255,0.04)' : 'rgba(255,255,255,0.02)',
@@ -43,6 +108,8 @@ function ConfigCard({ cfg, isActive, onUse, onSetDefault, onDelete, onEdit }) {
         )
       ),
       h('div', { style: { display: 'flex', gap: '4px', alignItems: 'center' } },
+        cfg.status === 'online' && h('span', { style: { fontSize: '0.625rem', color: '#4ade80', background: 'rgba(74,222,128,0.1)', padding: '2px 8px', borderRadius: '8px' } }, '● 在线'),
+        cfg.status === 'error' && h('span', { style: { fontSize: '0.625rem', color: '#f87171', background: 'rgba(248,113,113,0.1)', padding: '2px 8px', borderRadius: '8px' } }, '● 错误'),
         cfg.isDefault && h('span', {
           style: { fontSize: '0.625rem', color: '#fbbf24', background: 'rgba(251,191,36,0.1)', padding: '2px 8px', borderRadius: '8px' }
         }, '默认'),
@@ -55,11 +122,29 @@ function ConfigCard({ cfg, isActive, onUse, onSetDefault, onDelete, onEdit }) {
       cfg.baseURL || '未设置'
     ),
     h('div', { style: { fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' } }, maskedKey || '未设置 Key'),
+    cfg.models && cfg.models.length > 0 && h('div', { style: { fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '2px', opacity: 0.5 } },
+      `${cfg.models.length} 个模型可用`
+    ),
+    cardResults[cfg.id] && h('div', {
+      style: {
+        fontSize: '0.625rem', marginTop: '4px', padding: '4px 8px', borderRadius: '6px',
+        background: cardResults[cfg.id].ok ? 'rgba(74,222,128,0.04)' : 'rgba(248,113,113,0.04)',
+        color: cardResults[cfg.id].ok ? 'var(--text-primary)' : 'var(--text-secondary)'
+      }
+    }, cardResults[cfg.id].msg),
     h('div', { style: { display: 'flex', gap: '6px', marginTop: '10px', justifyContent: 'flex-end' } },
+      h('button', {
+        style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '8px', background: 'transparent', color: testingId === cfg.id ? 'var(--text-muted)' : '#4ade80', cursor: testingId === cfg.id ? 'wait' : 'pointer' },
+        onClick: e => { e.stopPropagation(); handleCardTest(cfg); }
+      }, testingId === cfg.id ? '测试中...' : '测试'),
+      h('button', {
+        style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(139,147,255,0.15)', borderRadius: '8px', background: 'transparent', color: fetchingModelsId === cfg.id ? 'var(--text-muted)' : 'var(--text-accent)', cursor: fetchingModelsId === cfg.id ? 'wait' : 'pointer' },
+        onClick: e => { e.stopPropagation(); handleCardFetchModels(cfg); }
+      }, fetchingModelsId === cfg.id ? '获取中...' : '模型'),
       !cfg.isDefault && h('button', {
         style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(139,147,255,0.15)', borderRadius: '8px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' },
         onClick: e => { e.stopPropagation(); onSetDefault(cfg.id); }
-      }, '设为默认'),
+      }, '默认'),
       h('button', {
         style: { fontSize: '0.6875rem', padding: '3px 10px', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' },
         onClick: e => { e.stopPropagation(); onEdit(cfg); }
