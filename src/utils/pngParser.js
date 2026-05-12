@@ -377,22 +377,49 @@ function parseCharacterMetadata(metadata) {
   const cardFields = ['chara', 'ccv3', 'character', 'tavern'];
 
   for (const field of cardFields) {
-    if (metadata[field]) {
-      const decoded = tryBase64Decode(metadata[field]);
-      if (typeof decoded === 'object' && decoded !== null) {
-        console.log('[PNGParser] Decoded', field + ', keys:', Object.keys(decoded));
+    if (!metadata[field]) continue;
+    
+    const decoded = tryBase64Decode(metadata[field]);
+    if (typeof decoded !== 'object' || decoded === null) continue;
+    
+    console.log('[PNGParser] Decoded ' + field + ', keys:', Object.keys(decoded));
+    console.log('[PNGParser] decoded.name:', decoded.name || '(empty)');
+    console.log('[PNGParser] personality from ' + field + ':', (decoded.personality || '').substring(0, 60) || '(empty)');
+    console.log('[PNGParser] scenario from ' + field + ':', (decoded.scenario || '').substring(0, 60) || '(empty)');
 
-        // ccv3 格式有 data 子对象
-        if (decoded.data && typeof decoded.data === 'object') {
-          Object.assign(result, decoded.data);
-          if (decoded.name) result.name = decoded.name;
-        } else {
-          Object.assign(result, decoded);
+    // 处理 data 子对象（ccv3 格式，或者有些卡把字段包在 data 里）
+    if (decoded.data && typeof decoded.data === 'object') {
+      console.log('[PNGParser] Found data field, keys:', Object.keys(decoded.data));
+      console.log('[PNGParser] personality from data:', (decoded.data.personality || '').substring(0, 60) || '(empty)');
+      console.log('[PNGParser] scenario from data:', (decoded.data.scenario || '').substring(0, 60) || '(empty)');
+
+      // 先将 data 内层字段合并到 decoded（data 优先，因为它是真正的角色数据）
+      const dataFields = [
+        'name', 'description', 'personality', 'scenario', 'first_mes', 'mes_example',
+        'creator_notes', 'system_prompt', 'post_history_instructions',
+        'alternate_greetings', 'tags', 'creator', 'character_version',
+        'extensions', 'worldbook', 'character_book'
+      ];
+      
+      dataFields.forEach(df => {
+        if (decoded.data[df] !== undefined && decoded.data[df] !== null) {
+          // data 字段覆盖外层空值或覆盖外层值（data 是真实数据源）
+          if (!decoded[df] || decoded[df] === '' || decoded[df] === null || (Array.isArray(decoded[df]) && decoded[df].length === 0)) {
+            console.log('[PNGParser] Taking field from data:', df);
+            decoded[df] = decoded.data[df];
+          }
         }
-        // 找到有效数据后停止
-        if (result.name) break;
-      }
+      });
     }
+
+    // 现在将 decoded 的字段合并到 result
+    Object.assign(result, decoded);
+    
+    console.log('[PNGParser] After merge - personality:', (result.personality || '').substring(0, 60) || '(empty)');
+    console.log('[PNGParser] After merge - scenario:', (result.scenario || '').substring(0, 60) || '(empty)');
+
+    // 找到有效数据后停止
+    if (result.name) break;
   }
 
   // 确保所有字段都存在，统一命名
@@ -415,11 +442,11 @@ function parseCharacterMetadata(metadata) {
     _raw: metadata,
   };
 
-  // 调试日志：显示解析结果
+  // 调试日志
   console.log('[PNGParser] Character name:', finalResult.name);
   console.log('[PNGParser] first_mes preview:', finalResult.first_mes ? finalResult.first_mes.substring(0, 50) : 'empty');
-  console.log('[PNGParser] personality preview:', finalResult.personality ? finalResult.personality.substring(0, 50) : 'empty');
-  console.log('[PNGParser] scenario preview:', finalResult.scenario ? finalResult.scenario.substring(0, 50) : 'empty');
+  console.log('[PNGParser] personality final:', finalResult.personality ? finalResult.personality.substring(0, 50) : 'EMPTY');
+  console.log('[PNGParser] scenario final:', finalResult.scenario ? finalResult.scenario.substring(0, 50) : 'EMPTY');
   console.log('[PNGParser] tags:', finalResult.tags);
   console.log('[PNGParser] hasWorldbook:', !!(finalResult.worldbook && finalResult.worldbook.length));
 
