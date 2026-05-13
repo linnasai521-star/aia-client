@@ -1,0 +1,63 @@
+:root {
+  /* 主色 - 粉紫渐变 */
+  --primary-50: #fff1f6;
+  --primary-100: #ffe4ec;
+  --primary-200: #fecddc;
+  --primary-300: #fda4c2;
+  --primary-400: #fb6f9a;
+  --primary-500: #f43f7a;
+  --primary-600: #db2f6a;
+  
+  /* 辅助色 - 淡紫 */
+  --secondary-50: #f5f3ff;
+  --secondary-100: #ede9fe;
+  --secondary-200: #ddd6fe;
+  --secondary-300: #c4b5fd;
+  --secondary-400: #a78bfa;
+  
+  /* 背景系统 */
+  --bg-main: linear-gradient(135deg, #fff7fb 0%, #f5f3ff 50%, #eef2ff 100%);
+  --bg-card: rgba(255,255,255,0.6);
+  --bg-glass: rgba(255,255,255,0.4);
+  --bg-glass-strong: rgba(255,255,255,0.7);
+  --bg-input: rgba(255,255,255,0.5);
+  --bg-overlay: rgba(255,241,246,0.95);
+  
+  /* 文字色 */
+  --text-primary: #2d1b4e;
+  --text-secondary: #6b5b8a;
+  --text-muted: #9b8fb4;
+  --text-white: #ffffff;
+  
+  /* 玻璃边框 */
+  --glass-border: rgba(255,255,255,0.6);
+  --glass-border-focus: rgba(253,164,194,0.5);
+  
+  /* 阴影 */
+  --shadow-sm: 0 2px 8px rgba(180,130,200,0.08);
+  --shadow-md: 0 6px 20px rgba(180,130,200,0.12);
+  --shadow-lg: 0 12px 40px rgba(180,130,200,0.16);
+  --shadow-glow: 0 0 20px rgba(244,63,122,0.15);
+  
+  /* 圆角 */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 999px;
+  
+  /* 间距 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  
+  /* 字体 */
+  --font-main: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", "Fira Code", monospace;
+}
