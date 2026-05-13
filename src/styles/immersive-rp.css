@@ -68,6 +68,28 @@ html, body, #root {
   border-radius: 2px;
 }
 
+/* ===== 输入框美化 ===== */
+.chat-input-wrapper, input[type="text"], textarea {
+  background: rgba(255,255,255,0.75) !important;
+  backdrop-filter: var(--blur) !important;
+  -webkit-backdrop-filter: var(--blur) !important;
+  border: 1.5px solid rgba(255,200,230,0.35) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-main) !important;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif !important;
+}
+
+.chat-input-wrapper:focus-within, textarea:focus, input[type="text"]:focus {
+  border-color: rgba(167,139,250,0.4) !important;
+  box-shadow: 0 0 0 3px rgba(167,139,250,0.08) !important;
+}
+
+.chat-send-btn, button[type="submit"] {
+  background: linear-gradient(135deg, var(--primary), var(--accent)) !important;
+  box-shadow: 0 2px 12px rgba(167,139,250,0.25) !important;
+  border-radius: 50% !important;
+}
+
 /* ===== 新版布局 + 视觉主题（彻底重构） ===== */
 
 /* ── 根层：100%高度链 ── */
