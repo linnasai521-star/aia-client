@@ -418,8 +418,37 @@ function parseCharacterMetadata(metadata) {
     console.log('[PNGParser] After merge - personality:', (result.personality || '').substring(0, 60) || '(empty)');
     console.log('[PNGParser] After merge - scenario:', (result.scenario || '').substring(0, 60) || '(empty)');
 
+    // ---- worldbook / character_book 提取修复 ----
+    // 处理 decoded.character_book
+    if (decoded.character_book) {
+      console.log('[PNGParser] character_book found at decoded level, entries count:', 
+        decoded.character_book.entries ? decoded.character_book.entries.length : 
+        Array.isArray(decoded.character_book) ? decoded.character_book.length : 'unknown structure');
+      result.worldbook = decoded.character_book.entries || decoded.character_book;
+    }
+
+    // 处理 decoded.data.character_book
+    if (decoded.data && decoded.data.character_book) {
+      console.log('[PNGParser] data.character_book found, entries count:', 
+        decoded.data.character_book.entries ? decoded.data.character_book.entries.length : 
+        Array.isArray(decoded.data.character_book) ? decoded.data.character_book.length : 'unknown structure');
+      result.worldbook = decoded.data.character_book.entries || decoded.data.character_book;
+    }
+
+    console.log('[PNGParser] worldbook entries so far:', Array.isArray(result.worldbook) ? result.worldbook.length : 0);
+
     // 找到有效数据后停止
     if (result.name) break;
+  }
+
+  // ---- 处理外层 character_book（不在 decoded 里的情况）----
+  if ((!result.worldbook || result.worldbook.length === 0) && metadata.character_book) {
+    console.log('[PNGParser] Fallback: checking metadata.character_book');
+    const decodedBook = tryBase64Decode(metadata.character_book);
+    if (decodedBook && typeof decodedBook === 'object') {
+      result.worldbook = decodedBook.entries || decodedBook;
+      console.log('[PNGParser] metadata.character_book entries:', Array.isArray(result.worldbook) ? result.worldbook.length : 0);
+    }
   }
 
   // 确保所有字段都存在，统一命名
@@ -438,17 +467,23 @@ function parseCharacterMetadata(metadata) {
     creator: result.creator || '',
     character_version: result.character_version || result.characterVersion || '',
     extensions: result.extensions || {},
-    worldbook: result.worldbook || result.character_book || [],
+    worldbook: Array.isArray(result.worldbook) ? result.worldbook : 
+               (result.worldbook && result.worldbook.entries ? result.worldbook.entries : []),
     _raw: metadata,
   };
 
   // 调试日志
   console.log('[PNGParser] Character name:', finalResult.name);
+  console.log('[PNGParser] description preview:', finalResult.description ? finalResult.description.substring(0, 50) : 'empty');
   console.log('[PNGParser] first_mes preview:', finalResult.first_mes ? finalResult.first_mes.substring(0, 50) : 'empty');
   console.log('[PNGParser] personality final:', finalResult.personality ? finalResult.personality.substring(0, 50) : 'EMPTY');
   console.log('[PNGParser] scenario final:', finalResult.scenario ? finalResult.scenario.substring(0, 50) : 'EMPTY');
   console.log('[PNGParser] tags:', finalResult.tags);
   console.log('[PNGParser] hasWorldbook:', !!(finalResult.worldbook && finalResult.worldbook.length));
+  console.log('[PNGParser] Final worldbook entries:', finalResult.worldbook.length);
+  if (finalResult.worldbook.length > 0) {
+    console.log('[PNGParser] worldbook sample:', JSON.stringify(finalResult.worldbook[0]).substring(0, 200));
+  }
 
   return finalResult;
 }
