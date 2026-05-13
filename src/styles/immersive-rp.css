@@ -22,6 +22,22 @@
   color-scheme: light !important;
 }
 
+/* ===== 强制浅色 + 全局背景 ===== */
+html, body, #root {
+  background: var(--bg) !important;
+  color-scheme: light !important;
+}
+
+.app-shell, .app-container, #root > div {
+  background: linear-gradient(160deg, #f8f4ff 0%, #fff0f5 40%, #f5f0fa 100%) !important;
+}
+
+/* 强制深色模式覆盖 */
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: light !important; }
+  html, body { background: var(--bg) !important; color-scheme: light !important; }
+}
+
 /* ===== 新版布局 + 视觉主题（彻底重构） ===== */
 
 /* ── 根层：100%高度链 ── */
