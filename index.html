@@ -10,11 +10,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="src/styles/design-system.css?v=1">
-<link rel="stylesheet" href="src/styles/immersive-rp.css?v=16">
-
+<link rel="stylesheet" href="src/styles/immersive-rp.css?v=15">
 <title>AI Aggregator</title>
-<script type="importmap"
+<script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@18.2.0",
@@ -26,16 +24,29 @@
   }
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/eruda@3.4.0/eruda.min.js"></script>
-<script>eruda.init();</script>
 </head>
 <body>
-<div class="decoration-orb orb-1"></div>
-<div class="decoration-orb orb-2"></div>
-<div class="decoration-orb orb-3"></div>
 <div class="atmosphere-layer"></div>
 <div class="light-stream"></div>
 <div id="root"></div>
 <script type="module" src="src/app.js?v=15"></script>
-<!-- Service Worker disabled for debugging -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        console.log('SW registered:', reg.scope);
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated') {
+              window.location.reload();
+            }
+          });
+        });
+      });
+  });
+}
+</script>
 </body>
+</html>
