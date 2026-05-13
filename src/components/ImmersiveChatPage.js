@@ -2,6 +2,34 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Ctx } from '../state.js';
 import { renderMarkdown } from '../utils/markdown.js';
 const h = React.createElement;
+
+// 渲染角色头像组件
+function renderCharAvatar(avatar, name, className = 'char-avatar-large') {
+  const [imgError, setImgError] = React.useState(false);
+  
+  if (avatar && !imgError) {
+    return React.createElement('img', {
+      src: avatar,
+      alt: name,
+      className: className,
+      onError: function() { setImgError(true); },
+      style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }
+    });
+  }
+  
+  return React.createElement('div', { 
+    className: 'char-initial',
+    style: { 
+      width: '100%', 
+      height: '100%', 
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: className.includes('large') ? '2rem' : '1rem'
+    }
+  }, name?.[0] || '✨');
+}
+
 const GREETINGS = [
   '今天怎么这么晚才来？', '我刚刚还在想你会不会来。', '你来啦，我等你好久了。',
   '终于等到你了。', '今天也来陪我聊天吗？', '我一直在等你回来。', '这么晚还不睡，在等我吗？',
@@ -92,7 +120,7 @@ export function ImmersiveChatPage() {
         h('div', { className: 'char-time-indicator' }, now()),
         h('div', { className: 'char-avatar-large' },
           h('div', { className: 'avatar-inner' },
-            ca ? h('img', { src: ca, alt: cn, style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } }) : (cn[0] || '✨')
+            renderCharAvatar(ca, cn, 'char-avatar-large')
           )
         ),
         h('div', { className: 'char-name-display', style: { marginTop: '12px', fontSize: '1.5rem' } },
@@ -152,13 +180,7 @@ export function ImmersiveChatPage() {
       // 角色展示区
       h('div', { className: 'char-showcase' },
         h('div', { className: 'char-avatar-frame' },
-          h('img', {
-            src: ca || '',
-            alt: cn,
-            className: 'char-avatar-large',
-            onError: function(e) { e.target.style.display = 'none'; }
-          }),
-          h('div', { className: 'char-initial' }, cn?.[0] || '?')
+          renderCharAvatar(ca, cn, 'char-avatar-large')
         ),
         h('h2', { className: 'char-display-name' }, cn),
         h('div', { className: 'char-stats' },
