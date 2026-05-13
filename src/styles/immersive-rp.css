@@ -90,6 +90,28 @@ html, body, #root {
   border-radius: 50% !important;
 }
 
+/* ===== 消息气泡美化 ===== */
+.msg-ai-bubble, [class*="msg-ai"] [class*="bubble"] {
+  background: rgba(255,255,255,0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255,255,255,0.7) !important;
+  border-radius: 4px 20px 20px 20px !important;
+  color: var(--text-main) !important;
+  line-height: 1.8 !important;
+  box-shadow: 0 2px 12px rgba(255,182,213,0.08) !important;
+  padding: 12px 16px !important;
+}
+
+.msg-user-bubble, [class*="msg-user"] [class*="bubble"] {
+  background: linear-gradient(135deg, rgba(253,164,194,0.25), rgba(167,139,250,0.2)) !important;
+  border: 1px solid rgba(255,200,220,0.3) !important;
+  border-radius: 20px 4px 20px 20px !important;
+  color: var(--text-main) !important;
+  line-height: 1.8 !important;
+  box-shadow: 0 2px 12px rgba(255,182,213,0.1) !important;
+  padding: 12px 16px !important;
+}
+
 /* ===== 新版布局 + 视觉主题（彻底重构） ===== */
 
 /* ── 根层：100%高度链 ── */
