@@ -1,48 +1,35 @@
-/* ===== 新主题覆盖（添加在文件最顶部）===== */
+/* ===== 覆盖深色主题 ===== */
 
-/* 全局背景渐变 */
 body, html, #root {
-  background: linear-gradient(135deg, #fff7fb 0%, #f5f3ff 50%, #eef2ff 100%) !important;
+  background: linear-gradient(180deg, #f0e6f6 0%, #f5f0fa 30%, #faf5ff 60%, #fef7ff 100%) !important;
+  color: #3a2a50 !important;
 }
 
-/* 确保所有容器继承背景 */
-.app-container, .app-main-content {
-  background: linear-gradient(135deg, #fff7fb 0%, #f5f3ff 50%, #eef2ff 100%) !important;
-}
-
-/* 强制所有文字为深色，确保可读 */
+/* 确保所有文字可见 */
 * {
-  color: #2d1b4e !important;
+  color: #3a2a50 !important;
 }
 
-/* 修复底部导航栏背景 */
+/* 链接和按钮文字 */
+a, button, label, span, p, div, h1, h2, h3, h4, h5, h6 {
+  color: #3a2a50 !important;
+}
+
+/* 底部导航恢复 */
 .app-bottom-nav, .bottom-nav, nav {
-  background: rgba(255, 247, 251, 0.85) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
+  background: rgba(255, 252, 255, 0.9) !important;
   border-top: none !important;
-  box-shadow: 0 -4px 24px rgba(180, 130, 200, 0.1) !important;
+  box-shadow: 0 -2px 12px rgba(180, 130, 200, 0.08) !important;
 }
 
-/* 修复底部导航图标颜色 */
-.nav-item.active, .app-nav-item.active {
-  color: #fb6f9a !important;
+/* 导航选中色 */
+.app-nav-item.active, .nav-item.active {
+  color: #b48adb !important;
 }
 
-/* 修复输入框为玻璃态 */
-.chat-input-container, input, textarea {
-  background: rgba(255, 255, 255, 0.75) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
-  border-radius: 20px !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-}
-
-/* 修复发送按钮为渐变 */
-.chat-send-btn, button[type="submit"], .send-btn {
-  background: linear-gradient(135deg, #fda4c2 0%, #c4b5fd 100%) !important;
-  box-shadow: 0 4px 16px rgba(244, 63, 122, 0.3) !important;
-  border-radius: 50% !important;
+/* 取消深色背景覆盖 */
+div, section, main, header {
+  background-color: transparent !important;
 }
 
 /* AI Aggregator - 沉浸式角色扮演 UI v1.0 
