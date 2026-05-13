@@ -38,6 +38,36 @@ html, body, #root {
   html, body { background: var(--bg) !important; color-scheme: light !important; }
 }
 
+/* ===== 底部导航美化 ===== */
+.bottom-nav, .app-bottom-nav, nav {
+  position: relative !important;
+  background: rgba(255,255,255,0.8) !important;
+  backdrop-filter: var(--blur) !important;
+  -webkit-backdrop-filter: var(--blur) !important;
+  border-top: 1px solid rgba(255,200,220,0.2) !important;
+  border-radius: 28px 28px 0 0 !important;
+  box-shadow: 0 -4px 24px rgba(255,182,213,0.1) !important;
+  padding: 4px 0 !important;
+  margin: 0 !important;
+}
+
+.bottom-nav .active, .app-bottom-nav .active, nav .active {
+  color: var(--accent) !important;
+  position: relative;
+}
+
+.bottom-nav .active::after, .app-bottom-nav .active::after, nav .active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 2px;
+}
+
 /* ===== 新版布局 + 视觉主题（彻底重构） ===== */
 
 /* ── 根层：100%高度链 ── */
