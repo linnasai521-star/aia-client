@@ -2,34 +2,6 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Ctx } from '../state.js';
 import { renderMarkdown } from '../utils/markdown.js';
 const h = React.createElement;
-
-// 渲染角色头像组件
-function renderCharAvatar(avatar, name, className = 'char-avatar-large') {
-  const [imgError, setImgError] = React.useState(false);
-  
-  if (avatar && !imgError) {
-    return React.createElement('img', {
-      src: avatar,
-      alt: name,
-      className: className,
-      onError: function() { setImgError(true); },
-      style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }
-    });
-  }
-  
-  return React.createElement('div', { 
-    className: 'char-initial',
-    style: { 
-      width: '100%', 
-      height: '100%', 
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: className.includes('large') ? '2rem' : '1rem'
-    }
-  }, name?.[0] || '✨');
-}
-
 const GREETINGS = [
   '今天怎么这么晚才来？', '我刚刚还在想你会不会来。', '你来啦，我等你好久了。',
   '终于等到你了。', '今天也来陪我聊天吗？', '我一直在等你回来。', '这么晚还不睡，在等我吗？',
@@ -80,28 +52,20 @@ export function ImmersiveChatPage() {
     
     if (iu) {
       return h('div', { key: msg.id, className: 'msg-user' },
-        h('div', { className: 'msg-user-bubble' }, 
-          h('div', { className: 'message-content' }, msg.content)
-        ),
-        h('div', { className: 'message-meta' }, 
-          h('span', { className: 'message-time' }, t)
-        )
+        h('div', { className: 'msg-user-bubble' }, msg.content),
+        h('span', { className: 'msg-time' }, t)
       );
     }
     
     const isReplying = ctx.loading && msg === ctx.msgs[ctx.msgs.length-1];
     return h('div', { key: msg.id, className: 'msg-ai' },
-      h('img', { 
-        src: ca || '', 
-        alt: cn, 
-        className: 'msg-ai-avatar',
-        onError: function(e) { e.target.style.display = 'none'; }
-      }),
-      h('div', { className: 'msg-ai-bubble' },
-        h('div', { className: 'message-content', dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } }),
-        h('div', { className: 'message-meta' }, 
-          h('span', { className: 'message-time' }, t)
-        )
+      h('div', { className: 'msg-ai-avatar' },
+        ca ? h('img', { src: ca, alt: cn, style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } }) : h('span', null, cn[0] || 'AI'),
+        isReplying ? h('span', { className: 'status-dot-sm' }) : null
+      ),
+      h('div', null,
+        h('div', { className: 'msg-ai-bubble', dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } }),
+        h('span', { className: 'msg-time' }, t)
       )
     );
   };
@@ -109,8 +73,7 @@ export function ImmersiveChatPage() {
   const renderTypingIndicator = () => {
     if (!ctx.loading && !isTyping) return null;
     return h('div', { className: 'typing-indicator' },
-      h('div', { className: 'typing-dots' }, h('div', { className: 'typing-dot' }), h('div', { className: 'typing-dot' }), h('div', { className: 'typing-dot' })),
-      h('span', null, '正在思考...')
+      h('div', { className: 'typing-dot' }), h('div', { className: 'typing-dot' }), h('div', { className: 'typing-dot' })
     );
   };
 
@@ -120,7 +83,7 @@ export function ImmersiveChatPage() {
         h('div', { className: 'char-time-indicator' }, now()),
         h('div', { className: 'char-avatar-large' },
           h('div', { className: 'avatar-inner' },
-            renderCharAvatar(ca, cn, 'char-avatar-large')
+            ca ? h('img', { src: ca, alt: cn, style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } }) : (cn[0] || '✨')
           )
         ),
         h('div', { className: 'char-name-display', style: { marginTop: '12px', fontSize: '1.5rem' } },
@@ -153,62 +116,36 @@ export function ImmersiveChatPage() {
 
   const renderStreamMessage = () => {
     if (!ctx.stream) return null;
-    return h('div', { className: 'message assistant' }, h('div', { className: 'message-bubble' }, h('div', { className: 'message-content' }, ctx.stream)));
+    return h('div', { className: 'msg-ai' }, h('div', { className: 'msg-ai-bubble' }, ctx.stream));
   };
 
   return h('div', { className: 'chat-page' },
-    h('div', { className: 'chat-header-immersive' },
-      // 顶部操作栏
-      h('div', { className: 'header-top-bar' },
-        h('button', {
-          className: 'header-back-btn',
-          onClick: () => ctx.setSidebar(true)
-        }, '☰'),
-        h('span', { className: 'header-title' }, cn),
-        h('div', { className: 'header-actions' },
-          h('button', { 
-            className: 'header-action-btn',
-            onClick: () => ctx.setPage('character')
-          }, '🎭'),
-          h('button', { 
-            className: 'header-action-btn',
-            onClick: () => ctx.setPage('settings')
-          }, '⚙️')
-        )
-      ),
-      
-      // 角色展示区
-      h('div', { className: 'char-showcase' },
-        h('div', { className: 'char-avatar-frame' },
-          renderCharAvatar(ca, cn, 'char-avatar-large')
-        ),
-        h('h2', { className: 'char-display-name' }, cn),
-        h('div', { className: 'char-stats' },
-          h('span', { className: 'stat-item' }, '❤️ 在线'),
-          h('span', { className: 'stat-item' }, '•'),
-          h('span', { className: 'stat-item' }, '记忆 100%')
-        )
-      )
+    // 顶部：角色信息条
+    h('div', { className: 'chat-header' },
+      h('button', { className: 'chat-back-btn', onClick: () => ctx.setSidebar(!ctx.sidebar) }, '☰'),
+      ca ? h('img', { className: 'chat-avatar-sm', src: ca, alt: cn }) : null,
+      h('span', { className: 'chat-char-name' }, hasCharacter ? cn : '深夜陪伴'),
+      hasCharacter ? h('span', { className: 'chat-status' }, '● 在线') : null,
+      h('button', { className: 'chat-back-btn', onClick: () => ctx.setPage('character'), style: { marginLeft: 'auto' } }, '🎭'),
+      h('button', { className: 'chat-back-btn', onClick: () => ctx.setPage('settings') }, '⚙️')
     ),
-    h('div', { className: 'messages-area' },
+    // 中间：消息区域（唯一可滚动）
+    h('div', { className: 'chat-messages-scroll' },
       ctx.msgs.length === 0 ? renderEmptyState() : ctx.msgs.map(renderMessage),
       renderStreamMessage(), renderTypingIndicator(), h('div', { ref: messagesEndRef })
     ),
-    h('div', { className: 'input-area' },
-      h('div', { className: 'input-container' },
-        h('div', { className: 'input-wrapper' },
-          h('textarea', {
-            ref: textareaRef, value: inputValue,
-            onChange: e => setInputValue(e.target.value),
-            onKeyDown: handleKeyDown,
-            placeholder: hasCharacter ? `和${cn}说些什么...` : '输入你想对她说的话...',
-            rows: 1
-          })
-        ),
-        h('div', { className: 'input-actions', style: { display: 'flex', gap: '8px', alignItems: 'center' } },
-          h('button', { className: 'stop-btn', onClick: () => ctx.stopStream(), disabled: !ctx.loading }, '⏹'),
-          h('button', { className: 'send-btn', onClick: handleSend, disabled: !inputValue.trim() || ctx.loading }, '➤')
-        )
+    // 底部：输入框（flex流中，不fixed）
+    h('div', { className: 'chat-input-bar' },
+      h('div', { className: 'chat-input-wrapper' },
+        h('textarea', {
+          ref: textareaRef, value: inputValue,
+          onChange: e => setInputValue(e.target.value),
+          onKeyDown: handleKeyDown,
+          placeholder: hasCharacter ? `和${cn}说些什么...` : '输入消息...',
+          rows: 1
+        }),
+        h('button', { className: 'chat-send-btn', onClick: handleSend, disabled: !inputValue.trim() || ctx.loading }, '↑'),
+        ctx.loading ? h('button', { className: 'chat-stop-btn', onClick: () => ctx.stopStream() }, '⏹') : null
       )
     )
   );
