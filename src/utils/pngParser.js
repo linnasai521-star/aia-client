@@ -412,9 +412,14 @@ function parseCharacterMetadata(metadata) {
       });
     }
 
+    // 调试：打印合并前的值
+    console.log('[PNGParser] Before merge - decoded.description:', decoded.description ? decoded.description.substring(0, 50) : 'EMPTY');
+    console.log('[PNGParser] Before merge - decoded.data?.description:', decoded.data?.description ? decoded.data.description.substring(0, 50) : 'EMPTY');
+    
     // 现在将 decoded 的字段合并到 result
     Object.assign(result, decoded);
     
+    console.log('[PNGParser] After merge - result.description:', result.description ? result.description.substring(0, 50) : 'EMPTY');
     console.log('[PNGParser] After merge - personality:', (result.personality || '').substring(0, 60) || '(empty)');
     console.log('[PNGParser] After merge - scenario:', (result.scenario || '').substring(0, 60) || '(empty)');
 
@@ -435,6 +440,23 @@ function parseCharacterMetadata(metadata) {
       result.worldbook = decoded.data.character_book.entries || decoded.data.character_book;
     }
 
+    // ---- 从 data 中补充任何缺失字段 ----
+    if (decoded.data && typeof decoded.data === 'object') {
+      console.log('[PNGParser] Checking data fields for missing values...');
+      Object.keys(decoded.data).forEach(key => {
+        // 如果 result 中该字段为空/假值，且 data 中有值，则补充
+        if (!result[key] && 
+            decoded.data[key] !== '' && 
+            decoded.data[key] !== undefined && 
+            decoded.data[key] !== null &&
+            !(Array.isArray(decoded.data[key]) && decoded.data[key].length === 0)) {
+          console.log('[PNGParser] Filling missing field from data:', key);
+          result[key] = decoded.data[key];
+        }
+      });
+    }
+
+    console.log('[PNGParser] After data supplement - result.description:', result.description ? result.description.substring(0, 50) : 'EMPTY');
     console.log('[PNGParser] worldbook entries so far:', Array.isArray(result.worldbook) ? result.worldbook.length : 0);
 
     // 找到有效数据后停止
