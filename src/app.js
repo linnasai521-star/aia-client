@@ -411,7 +411,7 @@ function App() {
   return h(Ctx.Provider, { value: ctx },
     h('div', { className: 'app', style: { background: settings.customBackground || settings.customBackgroundColor || 'var(--bg-primary)' } },
       h(ImmersiveSidebar),
-      h('div', { className: 'main' },
+      h('div', { className: 'main', style: { paddingBottom: '80px' } },
         page === 'chat' ? h(ImmersiveChatPage) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
