@@ -80,6 +80,67 @@ p {
   border-radius: var(--radius-sm, 18px) var(--radius-sm, 18px) 0 0 !important;
 }
 
+/* ===== 底部导航原生化 ===== */
+.bottom-nav, .app-bottom-nav, nav[class*="bottom"] {
+  position: relative !important;
+  background: rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border-top: none !important;
+  border-radius: 28px 28px 0 0 !important;
+  box-shadow: 0 -8px 40px rgba(160,120,220,0.08) !important;
+  padding: 6px 12px !important;
+  margin-bottom: 0 !important;
+}
+
+.bottom-nav .active, .app-bottom-nav .active, nav .active {
+  color: var(--accent, #a78bfa) !important;
+  position: relative !important;
+}
+
+/* 选中指示器（滑块） */
+.bottom-nav .active::after, .app-bottom-nav .active::after, nav .active::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 4px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 24px !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, var(--primary, #f6b7d2), var(--accent, #a78bfa)) !important;
+  border-radius: 2px !important;
+  animation: slideIndicator 300ms cubic-bezier(0.2,0.8,0.2,1) !important;
+}
+
+@keyframes slideIndicator {
+  from { width: 16px; opacity: 0.5; }
+  to { width: 24px; opacity: 1; }
+}
+
+/* 图标激活放大 */
+.bottom-nav .active .bot-nav-icon,
+.app-bottom-nav .active .bot-nav-icon,
+.bottom-nav .active .nav-icon,
+.app-bottom-nav .active .nav-icon,
+nav .active span:first-child {
+  transform: scale(1.12) !important;
+  filter: drop-shadow(0 2px 8px rgba(167,139,250,0.35)) !important;
+  transition: all 300ms cubic-bezier(0.2,0.8,0.2,1) !important;
+}
+
+/* 图标容器 */
+.bottom-nav > button, .app-bottom-nav > button, nav > button {
+  position: relative !important;
+  padding: 8px 16px !important;
+  border-radius: 16px !important;
+  transition: all 300ms cubic-bezier(0.2,0.8,0.2,1) !important;
+}
+
+.bottom-nav .active, .app-bottom-nav .active {
+  background: rgba(167,139,250,0.08) !important;
+  border-radius: 16px !important;
+}
+
 /* ===== 强制浅色 + 全局背景 ===== */
 html, body, #root {
   background: var(--bg) !important;
