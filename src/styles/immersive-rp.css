@@ -47,6 +47,39 @@ p {
   margin: 0 0 var(--space-4) 0;
 }
 
+/* ===== 卡片呼吸感系统 ===== */
+.rp-card, .char-card, .settings-card, [class*="card"] {
+  background: rgba(255,255,255,0.65) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.45) !important;
+  border-radius: var(--radius-sm, 18px) !important;
+  box-shadow: 
+    0 8px 32px rgba(255,182,213,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.6) !important;
+  transition: transform 220ms cubic-bezier(0.2,0.8,0.2,1), 
+              box-shadow 220ms cubic-bezier(0.2,0.8,0.2,1) !important;
+}
+
+.rp-card:active, .char-card:active, [class*="card"]:active {
+  transform: translateY(-2px) scale(0.99) !important;
+  box-shadow: 
+    0 12px 40px rgba(255,182,213,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.6) !important;
+}
+
+/* 卡片顶部渐变装饰线 */
+.char-card::before, .rp-card::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, var(--primary, #f6b7d2), var(--accent, #a78bfa)) !important;
+  border-radius: var(--radius-sm, 18px) var(--radius-sm, 18px) 0 0 !important;
+}
+
 /* ===== 强制浅色 + 全局背景 ===== */
 html, body, #root {
   background: var(--bg) !important;
