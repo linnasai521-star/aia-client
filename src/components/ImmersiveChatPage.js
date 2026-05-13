@@ -51,24 +51,30 @@ export function ImmersiveChatPage() {
     const t = new Date(msg.ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     
     if (iu) {
-      return h('div', { key: msg.id, className: 'message user' },
-        h('div', { className: 'message-bubble' }, h('div', { className: 'message-content' }, msg.content)),
-        h('div', { className: 'message-meta' }, h('span', { className: 'message-time' }, t), h('span', { className: 'message-status' }, '✓✓'))
+      return h('div', { key: msg.id, className: 'msg-user' },
+        h('div', { className: 'msg-user-bubble' }, 
+          h('div', { className: 'message-content' }, msg.content)
+        ),
+        h('div', { className: 'message-meta' }, 
+          h('span', { className: 'message-time' }, t)
+        )
       );
     }
     
     const isReplying = ctx.loading && msg === ctx.msgs[ctx.msgs.length-1];
-    return h('div', { key: msg.id, className: 'message assistant' },
-      h('div', { className: 'ai-avatar-wrap' },
-        h('div', { className: 'char-avatar-small' + (isReplying ? ' replying' : ''), style: { flexShrink: 0 } },
-          ca ? h('img', { src: ca, alt: cn }) : h('span', null, cn[0] || 'AI'),
-          h('span', { className: 'status-dot-sm' })
-        ),
-        h('div', { className: 'message-bubble' },
-          h('div', { className: 'message-content', dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } })
+    return h('div', { key: msg.id, className: 'msg-ai' },
+      h('img', { 
+        src: ca || '', 
+        alt: cn, 
+        className: 'msg-ai-avatar',
+        onError: function(e) { e.target.style.display = 'none'; }
+      }),
+      h('div', { className: 'msg-ai-bubble' },
+        h('div', { className: 'message-content', dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } }),
+        h('div', { className: 'message-meta' }, 
+          h('span', { className: 'message-time' }, t)
         )
-      ),
-      h('div', { className: 'message-meta' }, h('span', { className: 'message-time' }, t))
+      )
     );
   };
 
@@ -123,19 +129,43 @@ export function ImmersiveChatPage() {
   };
 
   return h('div', { className: 'chat-page' },
-    h('div', { className: 'chat-header' },
-      h('div', { className: 'chat-header-left' }, h('button', { className: 'header-icon', onClick: () => ctx.setSidebar(true) }, '☰')),
-      h('div', { className: 'chat-header-center' },
-        h('div', { className: 'header-title' },
-          hasCharacter ? h(React.Fragment, null,
-            h('span', { className: 'char-name' }, cn),
-            h('span', { className: 'status-dot' })
-          ) : h('span', null, '深夜陪伴')
+    h('div', { className: 'chat-header-immersive' },
+      // 顶部操作栏
+      h('div', { className: 'header-top-bar' },
+        h('button', {
+          className: 'header-back-btn',
+          onClick: () => ctx.setSidebar(true)
+        }, '☰'),
+        h('span', { className: 'header-title' }, cn),
+        h('div', { className: 'header-actions' },
+          h('button', { 
+            className: 'header-action-btn',
+            onClick: () => ctx.setPage('character')
+          }, '🎭'),
+          h('button', { 
+            className: 'header-action-btn',
+            onClick: () => ctx.setPage('settings')
+          }, '⚙️')
         )
       ),
-      h('div', { className: 'chat-header-right' },
-        h('button', { className: 'header-icon', onClick: () => ctx.setPage('character') }, '🎭'),
-        h('button', { className: 'header-icon', onClick: () => ctx.setPage('settings') }, '⚙️')
+      
+      // 角色展示区
+      h('div', { className: 'char-showcase' },
+        h('div', { className: 'char-avatar-frame' },
+          h('img', {
+            src: ca || '',
+            alt: cn,
+            className: 'char-avatar-large',
+            onError: function(e) { e.target.style.display = 'none'; }
+          }),
+          h('div', { className: 'char-initial' }, cn?.[0] || '?')
+        ),
+        h('h2', { className: 'char-display-name' }, cn),
+        h('div', { className: 'char-stats' },
+          h('span', { className: 'stat-item' }, '❤️ 在线'),
+          h('span', { className: 'stat-item' }, '•'),
+          h('span', { className: 'stat-item' }, '记忆 100%')
+        )
       )
     ),
     h('div', { className: 'messages-area' },
