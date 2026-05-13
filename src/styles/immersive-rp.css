@@ -1,35 +1,15 @@
-/* ===== 覆盖深色主题 ===== */
-
-body, html, #root {
-  background: linear-gradient(180deg, #f0e6f6 0%, #f5f0fa 30%, #faf5ff 60%, #fef7ff 100%) !important;
-  color: #3a2a50 !important;
+/* ===== 强制浅色模式（仅此一项） ===== */
+:root {
+  color-scheme: light !important;
 }
-
-/* 确保所有文字可见 */
-* {
-  color: #3a2a50 !important;
+html {
+  color-scheme: light !important;
+  background-color: #f5f0fa !important;
 }
-
-/* 链接和按钮文字 */
-a, button, label, span, p, div, h1, h2, h3, h4, h5, h6 {
-  color: #3a2a50 !important;
-}
-
-/* 底部导航恢复 */
-.app-bottom-nav, .bottom-nav, nav {
-  background: rgba(255, 252, 255, 0.9) !important;
-  border-top: none !important;
-  box-shadow: 0 -2px 12px rgba(180, 130, 200, 0.08) !important;
-}
-
-/* 导航选中色 */
-.app-nav-item.active, .nav-item.active {
-  color: #b48adb !important;
-}
-
-/* 取消深色背景覆盖 */
-div, section, main, header {
-  background-color: transparent !important;
+body {
+  color-scheme: light !important;
+  background-color: #f5f0fa !important;
+  background-image: none !important;
 }
 
 /* AI Aggregator - 沉浸式角色扮演 UI v1.0 
