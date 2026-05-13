@@ -141,6 +141,114 @@ nav .active span:first-child {
   border-radius: 16px !important;
 }
 
+/* ===== 聊天页沉浸感 ===== */
+
+/* 页面背景氛围 */
+.chat-page {
+  background: linear-gradient(180deg, #f8f4ff 0%, #fff0f5 40%, #faf5ff 100%) !important;
+  position: relative !important;
+}
+
+/* 头部增强 */
+.chat-header {
+  background: rgba(248,240,255,0.95) !important;
+  backdrop-filter: blur(32px) !important;
+  -webkit-backdrop-filter: blur(32px) !important;
+  border-bottom: 1px solid rgba(200,170,240,0.08) !important;
+  box-shadow: 0 4px 30px rgba(160,120,220,0.06) !important;
+  border-radius: 0 0 28px 28px !important;
+}
+
+/* 头像呼吸光 */
+.chat-avatar-sm {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  border: 2.5px solid rgba(167,139,250,0.25) !important;
+  box-shadow: 0 0 0 3px rgba(253,164,194,0.08), 0 4px 20px rgba(167,139,250,0.15) !important;
+  animation: chatAvatarBreathe 4s ease-in-out infinite !important;
+}
+
+@keyframes chatAvatarBreathe {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(253,164,194,0.08), 0 4px 20px rgba(167,139,250,0.15); }
+  50% { box-shadow: 0 0 0 5px rgba(253,164,194,0.06), 0 6px 28px rgba(167,139,250,0.2); }
+}
+
+/* AI消息气泡 */
+.msg-ai-bubble, [class*="msg-ai"] [class*="bubble"] {
+  background: rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255,255,255,0.85) !important;
+  border-radius: 6px 22px 22px 22px !important;
+  box-shadow: 0 4px 24px rgba(170,130,220,0.08), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+  line-height: 1.85 !important;
+  font-size: 15.5px !important;
+}
+
+/* 用户消息气泡 */
+.msg-user-bubble, [class*="msg-user"] [class*="bubble"] {
+  background: linear-gradient(135deg, rgba(253,164,194,0.28) 0%, rgba(196,181,253,0.24) 100%) !important;
+  border: 1px solid rgba(253,164,194,0.25) !important;
+  border-radius: 22px 6px 22px 22px !important;
+  box-shadow: 0 4px 20px rgba(253,164,194,0.1), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+  line-height: 1.85 !important;
+  font-size: 15.5px !important;
+}
+
+/* 消息滑入动画 */
+.msg-ai, .msg-user {
+  animation: msgFadeUp 0.35s cubic-bezier(0.2,0.8,0.2,1) !important;
+}
+
+@keyframes msgFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 输入框浮动设计 */
+.chat-input-bar {
+  background: linear-gradient(180deg, transparent 0%, rgba(248,240,255,0.95) 25%, rgba(248,240,255,0.98) 100%) !important;
+}
+
+.chat-input-wrapper {
+  background: rgba(255,255,255,0.85) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1.5px solid rgba(200,170,240,0.18) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 8px 40px rgba(160,120,220,0.1), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+  padding: 8px 8px 8px 18px !important;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: rgba(167,139,250,0.3) !important;
+  box-shadow: 0 8px 40px rgba(160,120,220,0.15), 0 0 0 4px rgba(167,139,250,0.04) !important;
+}
+
+/* 发送按钮渐变发光 */
+.chat-send-btn {
+  background: linear-gradient(135deg, var(--primary, #fda4c2) 0%, var(--accent, #c4b5fd) 100%) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 20px rgba(167,139,250,0.3), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+  animation: sendGlow 3s ease-in-out infinite !important;
+}
+
+.chat-send-btn:active {
+  transform: scale(0.88) !important;
+}
+
+@keyframes sendGlow {
+  0%, 100% { box-shadow: 0 4px 20px rgba(167,139,250,0.3), inset 0 1px 0 rgba(255,255,255,0.3); }
+  50% { box-shadow: 0 6px 28px rgba(167,139,250,0.35), inset 0 1px 0 rgba(255,255,255,0.3); }
+}
+
+/* 打字指示器 */
+.typing-dot {
+  background: linear-gradient(135deg, #c4b5fd, var(--primary, #fda4c2)) !important;
+}
+
 /* ===== 强制浅色 + 全局背景 ===== */
 html, body, #root {
   background: var(--bg) !important;
