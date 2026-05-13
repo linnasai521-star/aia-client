@@ -3164,3 +3164,120 @@ body {
   background: rgba(139,147,255,0.04);
   font-weight: 500;
 }
+
+
+/* ═══════════════════════════════════════════════
+   底部导航栏样式 - 少女梦幻 + 高级轻奢二次元
+   ═══════════════════════════════════════════════ */
+/* 底部导航 */
+.app-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 68px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(255, 247, 251, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(251, 111, 154, 0.12);
+  box-shadow: 
+    0 -4px 32px rgba(251, 111, 154, 0.08),
+    0 -1px 8px rgba(0, 0, 0, 0.03);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+/* 导航项 */
+.app-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  color: rgba(156, 140, 168, 0.7);
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.app-nav-item:hover {
+  background: rgba(251, 111, 154, 0.06);
+  color: rgba(156, 140, 168, 0.9);
+}
+
+/* 导航图标 */
+.app-nav-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+/* 导航文字 */
+.app-nav-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  font-family: var(--font-sans);
+  transition: all 0.3s ease;
+}
+
+/* 激活状态 */
+.app-nav-item.active {
+  color: #fb6f9a;
+}
+
+.app-nav-item.active .app-nav-icon {
+  transform: scale(1.15);
+  filter: drop-shadow(0 2px 8px rgba(251, 111, 154, 0.3));
+}
+
+.app-nav-item.active .app-nav-label {
+  font-weight: 600;
+  color: #fb6f9a;
+}
+
+/* 激活指示器 */
+.app-nav-item.active::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: #fb6f9a;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(251, 111, 154, 0.4);
+}
+
+/* 导航项进入动画 */
+@keyframes nav-item-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-nav-item:nth-child(1) { animation: nav-item-appear 0.5s ease 0.1s both; }
+.app-nav-item:nth-child(2) { animation: nav-item-appear 0.5s ease 0.2s both; }
+.app-nav-item:nth-child(3) { animation: nav-item-appear 0.5s ease 0.3s both; }
+.app-nav-item:nth-child(4) { animation: nav-item-appear 0.5s ease 0.4s both; }
+
+/* 页面容器底部留白 */
+.main-content {
+  padding-bottom: 80px;
+}
