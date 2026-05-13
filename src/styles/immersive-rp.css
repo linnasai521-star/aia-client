@@ -1,3 +1,55 @@
+/* ===== 移动端布局修复 ===== */
+
+/* 强制浅色模式 */
+:root {
+  color-scheme: light !important;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #f5f0fa !important;
+  background-image: none !important;
+}
+
+body {
+  color-scheme: light !important;
+}
+
+/* 根容器 Flex 布局 */
+.app-container, .app, #root > div {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 聊天区域必须用 flex + overflow */
+.chat-content, .messages-container, .chat-messages-scroll, [class*="message-list"] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 底部导航栏 - 不用 fixed，改用 flex-shrink 0 */
+.app-bottom-nav, .bottom-nav, nav[class*="bottom"], nav[class*="nav"] {
+  position: relative !important;
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* 输入框区域 - 不用 fixed */
+.chat-input-bar, .input-area, [class*="input-bar"], [class*="chat-input"] {
+  position: relative !important;
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 10;
+}
+
 /* ========== 新设计系统覆盖 - 少女梦幻风格 ========== */
 
 /* 全局背景 */
