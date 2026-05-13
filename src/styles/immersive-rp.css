@@ -1,3 +1,399 @@
+/* ========== 新设计系统覆盖 - 少女梦幻风格 ========== */
+
+/* 全局背景 */
+body {
+  background: var(--bg-main) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-main) !important;
+}
+
+/* 装饰层 */
+.decoration-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.3;
+  animation: floatOrb 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.orb-1 { width: 200px; height: 200px; background: rgba(253,164,194,0.3); top: 10%; left: -5%; animation-delay: 0s; }
+.orb-2 { width: 150px; height: 150px; background: rgba(167,139,250,0.25); top: 60%; right: -3%; animation-delay: 3s; }
+.orb-3 { width: 120px; height: 120px; background: rgba(255,228,236,0.3); bottom: 20%; left: 30%; animation-delay: 5s; }
+
+@keyframes floatOrb {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+/* 所有内容在装饰层之上 */
+.decoration-orb {
+  z-index: 0 !important;
+  position: fixed !important;
+}
+
+/* 卡片通用样式 */
+.card,
+.character-card,
+.msg-bubble {
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 消息气泡 */
+.msg-ai .msg-bubble {
+  border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg) !important;
+}
+
+.msg-user .msg-bubble {
+  background: linear-gradient(135deg, rgba(253,164,194,0.3), rgba(167,139,250,0.25)) !important;
+  border: 1px solid rgba(253,164,194,0.3) !important;
+  border-radius: var(--radius-lg) 4px var(--radius-lg) var(--radius-lg) !important;
+}
+
+/* 消息动画 */
+@keyframes msgFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 输入框 */
+.chat-input-wrapper {
+  background: rgba(255,255,255,0.6) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--glass-border-focus) !important;
+  box-shadow: var(--shadow-md), 0 0 0 3px rgba(253,164,194,0.1) !important;
+}
+
+/* 发送按钮 */
+.send-btn {
+  background: linear-gradient(135deg, var(--primary-300), var(--primary-400)) !important;
+  box-shadow: 0 2px 12px rgba(244,63,122,0.3) !important;
+}
+
+/* 底部导航 */
+.bottom-nav,
+.app-bottom-nav {
+  background: rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255,255,255,0.8) !important;
+  box-shadow: 0 -2px 20px rgba(180,130,200,0.08) !important;
+}
+
+.nav-item.active,
+.app-nav-item.active {
+  color: var(--primary-400) !important;
+}
+
+/* 页面切换 */
+@keyframes pageSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast */
+.toast {
+  background: var(--bg-glass-strong) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 按钮通用 */
+button:not(.send-btn) {
+  border-radius: var(--radius-md) !important;
+}
+
+/* 输入框 */
+input,
+textarea {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--glass-border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(253,164,194,0.1) !important;
+}
+
+/* 角色详情页头部 */
+.char-detail-header {
+  background: var(--bg-card) !important;
+}
+
+.char-detail-header .cover-overlay {
+  background: linear-gradient(to top, var(--bg-overlay) 20%, transparent) !important;
+}
+
+.char-detail-header .char-avatar-large {
+  border: 3px solid white !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.char-detail-header .char-name-large {
+  color: var(--text-primary) !important;
+}
+
+.char-detail-header .char-meta {
+  color: var(--text-muted) !important;
+}
+
+/* 角色信息块 */
+.char-info-block {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.char-info-block .block-label {
+  color: var(--primary-400) !important;
+}
+
+.char-info-block .block-content {
+  color: var(--text-secondary) !important;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  border-color: var(--primary-100) !important;
+  border-top-color: var(--primary-400) !important;
+}
+
+/* 覆盖旧的深色背景 */
+:root {
+  --bg-primary: #fff7fb !important;
+  --bg-secondary: #f5f3ff !important;
+  --bg-tertiary: #eef2ff !important;
+  --bg-card: rgba(255,255,255,0.6) !important;
+  --bg-card-hover: rgba(255,255,255,0.8) !important;
+  --bg-input: rgba(255,255,255,0.5) !important;
+  --text-primary: #2d1b4e !important;
+  --text-secondary: #6b5b8a !important;
+  --text-muted: #9b8fb4 !important;
+  --accent-primary: #fb6f9a !important;
+  --accent-secondary: #a78bfa !important;
+  --glass-bg: rgba(255,255,255,0.7) !important;
+  --glass-border: rgba(255,255,255,0.6) !important;
+}
+
+/* ========== 新设计系统覆盖 - 少女梦幻风格 ========== */
+
+/* 全局背景 */
+body {
+  background: var(--bg-main) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-main) !important;
+}
+
+/* 装饰层 */
+.decoration-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.3;
+  animation: floatOrb 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.orb-1 { width: 200px; height: 200px; background: rgba(253,164,194,0.3); top: 10%; left: -5%; animation-delay: 0s; }
+.orb-2 { width: 150px; height: 150px; background: rgba(167,139,250,0.25); top: 60%; right: -3%; animation-delay: 3s; }
+.orb-3 { width: 120px; height: 120px; background: rgba(255,228,236,0.3); bottom: 20%; left: 30%; animation-delay: 5s; }
+
+@keyframes floatOrb {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+/* 所有内容在装饰层之上 */
+.decoration-orb {
+  z-index: 0 !important;
+  position: fixed !important;
+}
+
+/* 卡片通用样式 */
+.card,
+.character-card,
+.msg-bubble {
+  background: var(--bg-card) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 消息气泡 */
+.msg-ai .msg-bubble {
+  border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg) !important;
+}
+
+.msg-user .msg-bubble {
+  background: linear-gradient(135deg, rgba(253,164,194,0.3), rgba(167,139,250,0.25)) !important;
+  border: 1px solid rgba(253,164,194,0.3) !important;
+  border-radius: var(--radius-lg) 4px var(--radius-lg) var(--radius-lg) !important;
+}
+
+/* 消息动画 */
+@keyframes msgFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 输入框 */
+.chat-input-wrapper {
+  background: rgba(255,255,255,0.6) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--glass-border-focus) !important;
+  box-shadow: var(--shadow-md), 0 0 0 3px rgba(253,164,194,0.1) !important;
+}
+
+/* 发送按钮 */
+.send-btn {
+  background: linear-gradient(135deg, var(--primary-300), var(--primary-400)) !important;
+  box-shadow: 0 2px 12px rgba(244,63,122,0.3) !important;
+}
+
+/* 底部导航 */
+.bottom-nav,
+.app-bottom-nav {
+  background: rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255,255,255,0.8) !important;
+  box-shadow: 0 -2px 20px rgba(180,130,200,0.08) !important;
+}
+
+.nav-item.active,
+.app-nav-item.active {
+  color: var(--primary-400) !important;
+}
+
+/* 页面切换 */
+@keyframes pageSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast */
+.toast {
+  background: var(--bg-glass-strong) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 按钮通用 */
+button:not(.send-btn) {
+  border-radius: var(--radius-md) !important;
+}
+
+/* 输入框 */
+input,
+textarea {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--glass-border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(253,164,194,0.1) !important;
+}
+
+/* 角色详情页头部 */
+.char-detail-header {
+  background: var(--bg-card) !important;
+}
+
+.char-detail-header .cover-overlay {
+  background: linear-gradient(to top, var(--bg-overlay) 20%, transparent) !important;
+}
+
+.char-detail-header .char-avatar-large {
+  border: 3px solid white !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.char-detail-header .char-name-large {
+  color: var(--text-primary) !important;
+}
+
+.char-detail-header .char-meta {
+  color: var(--text-muted) !important;
+}
+
+/* 角色信息块 */
+.char-info-block {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.char-info-block .block-label {
+  color: var(--primary-400) !important;
+}
+
+.char-info-block .block-content {
+  color: var(--text-secondary) !important;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  border-color: var(--primary-100) !important;
+  border-top-color: var(--primary-400) !important;
+}
+
+/* 覆盖旧的深色背景 */
+:root {
+  --bg-primary: #fff7fb !important;
+  --bg-secondary: #f5f3ff !important;
+  --bg-tertiary: #eef2ff !important;
+  --bg-card: rgba(255,255,255,0.6) !important;
+  --bg-card-hover: rgba(255,255,255,0.8) !important;
+  --bg-input: rgba(255,255,255,0.5) !important;
+  --text-primary: #2d1b4e !important;
+  --text-secondary: #6b5b8a !important;
+  --text-muted: #9b8fb4 !important;
+  --accent-primary: #fb6f9a !important;
+  --accent-secondary: #a78bfa !important;
+  --glass-bg: rgba(255,255,255,0.7) !important;
+  --glass-border: rgba(255,255,255,0.6) !important;
+}
+
 /* AI Aggregator - 沉浸式角色扮演 UI v1.0 
    风格：深夜陪伴 · 轻小说阅读感 · 视觉小说氛围
 */
