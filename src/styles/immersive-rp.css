@@ -1,3 +1,27 @@
+/* ===== Design Tokens ===== */
+:root {
+  --primary: #f6b7d2;
+  --primary-light: #ffd7ea;
+  --bg: #fff7fb;
+  --bg-end: #f5f0fa;
+  --surface: rgba(255,255,255,0.72);
+  --glass: rgba(255,255,255,0.55);
+  --glass-border: rgba(255,255,255,0.7);
+  --text-main: #44333d;
+  --text-sub: #8c7a84;
+  --text-hint: #b0a4c8;
+  --accent: #a78bfa;
+  --radius-xs: 12px;
+  --radius-sm: 18px;
+  --radius-md: 24px;
+  --radius-lg: 32px;
+  --radius-full: 999px;
+  --shadow-soft: 0 8px 32px rgba(255,182,213,0.12);
+  --blur: blur(24px);
+  --transition: 220ms cubic-bezier(0.2,0.8,0.2,1);
+  color-scheme: light !important;
+}
+
 /* ===== 新版布局 + 视觉主题（彻底重构） ===== */
 
 /* ── 根层：100%高度链 ── */
