@@ -406,18 +406,41 @@ function App() {
     tokenManager: tokenManager.current
   };
 
+  // 底部导航栏组件
+  function renderBottomNav() {
+    const items = [
+      { id: 'chat', icon: '💬', label: '聊天' },
+      { id: 'character', icon: '🎭', label: '角色' },
+      { id: 'memory', icon: '🧠', label: '记忆' },
+      { id: 'settings', icon: '⚙️', label: '设置' },
+    ];
+
+    return h('nav', { className: 'app-bottom-nav' },
+      items.map(item =>
+        h('button', {
+          key: item.id,
+          className: 'app-nav-item' + (page === item.id ? ' active' : ''),
+          onClick: () => setPage(item.id),
+        },
+          h('span', { className: 'app-nav-icon' }, item.icon),
+          h('span', { className: 'app-nav-label' }, item.label)
+        )
+      )
+    );
+  }
+
   if (!ready) return h('div', { className: 'empty-state' }, h('div', { className: 'icon' }, '⚡'), h('h3', null, 'Loading...'));
 
   return h(Ctx.Provider, { value: ctx },
-    h('div', { className: 'app', style: { background: settings.customBackground || settings.customBackgroundColor || 'var(--bg-primary)' } },
-      h(ImmersiveSidebar),
-      h('div', { className: 'main', style: { paddingBottom: '80px' } },
+    h('div', { className: 'app app-with-bottom-nav', style: { background: settings.customBackground || settings.customBackgroundColor || 'var(--bg-primary)' } },
+      h('div', { className: 'main-content' },
         page === 'chat' ? h(ImmersiveChatPage) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
         page === 'character' ? h(CharacterPage) :
         h(ImmersiveChatPage)
       ),
+      renderBottomNav(),
       locked ? h(LockScreen) : null
     )
   );
