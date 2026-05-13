@@ -277,6 +277,14 @@ export function CharacterPage() {
   }
 
   // ---------- 角色卡详情 ----------
+  // 调试日志：检查角色卡数据
+  console.log('[CharacterPage] Character data keys:', Object.keys(c));
+  console.log('[CharacterPage] c.description:', c.description ? c.description.substring(0, 80) : 'EMPTY');
+  console.log('[CharacterPage] c.personality:', c.personality ? c.personality.substring(0, 50) : 'EMPTY');
+  console.log('[CharacterPage] c.scenario:', c.scenario ? c.scenario.substring(0, 50) : 'EMPTY');
+  console.log('[CharacterPage] c.worldbook length:', c.worldbook ? c.worldbook.length : 0);
+  console.log('[CharacterPage] c.avatar:', c.avatar ? c.avatar.substring(0, 50) : 'EMPTY');
+
   const fields = [
     ['描述', c.description],
     ['性格', c.personality],
