@@ -372,18 +372,45 @@ function App() {
     tokenManager: tokenManager.current
   };
 
-  if (!ready) return h('div', { className: 'empty-state' }, h('div', { className: 'icon' }, '⚡'), h('h3', null, 'Loading...'));
+  if (!ready) return h('div', { className: 'empty-state' },
+    h('div', { className: 'empty-state-inner' },
+      h('div', { className: 'icon' }, '⚡'),
+      h('h3', null, 'Loading...')
+    )
+  );
+
+  // 底部导航栏
+  const navItems = [
+    { id: 'chat', icon: '💬', label: '聊天' },
+    { id: 'character', icon: '🎭', label: '角色' },
+    { id: 'memory', icon: '🧠', label: '记忆' },
+    { id: 'settings', icon: '⚙️', label: '设置' },
+  ];
+
+  const renderBottomNav = () => h('nav', { className: 'bottom-nav' },
+    navItems.map(item =>
+      h('button', {
+        key: item.id,
+        className: 'bot-nav-item' + (page === item.id ? ' active' : ''),
+        onClick: () => { setPage(item.id); setMsgs([]); setCurId(null); setSidebar(false); }
+      },
+        h('span', { className: 'bot-nav-icon' }, item.icon),
+        h('span', { className: 'bot-nav-label' }, item.label)
+      )
+    )
+  );
 
   return h(Ctx.Provider, { value: ctx },
-    h('div', { className: 'app', style: { background: settings.customBackground || settings.customBackgroundColor || 'var(--bg-primary)' } },
+    h('div', { className: 'app-shell' },
       h(ImmersiveSidebar),
-      h('div', { className: 'main' },
+      h('div', { className: 'page-content-area' },
         page === 'chat' ? h(ImmersiveChatPage) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
         page === 'character' ? h(CharacterPage) :
         h(ImmersiveChatPage)
       ),
+      renderBottomNav(),
       locked ? h(LockScreen) : null
     )
   );
