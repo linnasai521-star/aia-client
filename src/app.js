@@ -85,12 +85,46 @@ function App() {
   function initRpEngine(card) {
     loreBookEngine.current.clear();
     promptAssembler.current.clear();
+    
+    // 调试日志
+    console.log('[RPEngine] initRpEngine called');
+    console.log('[RPEngine] card exists:', !!card);
+    console.log('[RPEngine] card.worldbook:', card?.worldbook);
+    console.log('[RPEngine] card.worldbook type:', typeof card?.worldbook);
+    console.log('[RPEngine] card.worldbook is array:', Array.isArray(card?.worldbook));
+    console.log('[RPEngine] card.worldbook length:', card?.worldbook?.length);
+    
     if (card) {
-      if (card.worldbook && Array.isArray(card.worldbook) && card.worldbook.length) {
-        const entries = loreBookEngine.current.importFromJSON(card.worldbook);
-        loreBookEngine.current.addEntries(entries);
-        console.log('[RPEngine] Loaded', entries.length, 'lorebook entries');
+      // 处理不同格式的 worldbook
+      let worldbookData = card.worldbook;
+      
+      // 如果 worldbook 是对象且有 entries 属性，取 entries
+      if (worldbookData && typeof worldbookData === 'object' && !Array.isArray(worldbookData) && worldbookData.entries) {
+        worldbookData = worldbookData.entries;
+        console.log('[RPEngine] Extracted entries from worldbook object, length:', worldbookData.length);
       }
+      
+      if (worldbookData && Array.isArray(worldbookData) && worldbookData.length) {
+        console.log('[RPEngine] Processing worldbook array, first entry:', JSON.stringify(worldbookData[0]).substring(0, 100));
+        
+        // 如果数组元素已经是标准格式（有 key/keys 和 content），直接传入
+        const firstEntry = worldbookData[0];
+        if (firstEntry && (firstEntry.key || firstEntry.keys) && firstEntry.content) {
+          console.log('[RPEngine] Using direct array format');
+          const entries = loreBookEngine.current.importFromJSON({ entries: worldbookData });
+          loreBookEngine.current.addEntries(entries);
+          console.log('[RPEngine] Loaded', entries.length, 'lorebook entries from direct array');
+        } else {
+          // 尝试作为原始数组传入
+          console.log('[RPEngine] Using raw array format');
+          const entries = loreBookEngine.current.importFromJSON(worldbookData);
+          loreBookEngine.current.addEntries(entries);
+          console.log('[RPEngine] Loaded', entries.length, 'lorebook entries from raw array');
+        }
+      } else {
+        console.log('[RPEngine] No valid worldbook data found');
+      }
+      
       promptAssembler.current.setFromCharacterCard(card);
     }
   }
