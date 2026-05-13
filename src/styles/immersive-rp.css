@@ -112,6 +112,44 @@ html, body, #root {
   padding: 12px 16px !important;
 }
 
+/* ===== 角色卡美化 ===== */
+.character-page, [class*="character"] {
+  background: transparent !important;
+}
+
+.character-card, [class*="char-card"] {
+  background: var(--glass) !important;
+  backdrop-filter: var(--blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-soft) !important;
+}
+
+.empty-state, [class*="empty"] {
+  background: transparent !important;
+}
+
+.empty-state h3, [class*="empty"] h3 {
+  color: var(--text-main) !important;
+}
+
+.empty-state p, [class*="empty"] p {
+  color: var(--text-sub) !important;
+}
+
+.empty-btn, [class*="empty"] button {
+  background: var(--glass) !important;
+  border: 1.5px solid var(--glass-border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-main) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.empty-btn:active, [class*="empty"] button:active {
+  transform: scale(0.98) !important;
+  background: rgba(255,255,255,0.8) !important;
+}
+
 /* ===== 新版布局 + 视觉主题（彻底重构） ===== */
 
 /* ── 根层：100%高度链 ── */
