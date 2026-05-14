@@ -1,7 +1,6 @@
 import React from 'react';
 import AtmosphereBackground from '../components/layers/AtmosphereBackground';
 import BottomNavDock from '../components/layers/BottomNavDock';
-import './character-hall.css';
 
 const h = React.createElement;
 
