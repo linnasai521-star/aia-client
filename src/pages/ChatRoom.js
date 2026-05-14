@@ -5,14 +5,35 @@ import FloatingContent from '../components/layers/FloatingContent';
 import MessageLayer from '../components/layers/MessageLayer';
 import InputDock from '../components/layers/InputDock';
 import BottomNavDock from '../components/layers/BottomNavDock';
+import { renderMarkdown } from '../utils/markdown.js';
 
 const h = React.createElement;
 
-/**
- * ChatRoom — 聊天页面统一布局容器
- * 六个独立层在z轴上叠加
- */
-export default function ChatRoom({ character, messages, inputValue, onInputChange, onSend, loading, activeNav, onNavigate }) {
+function formatTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+export default function ChatRoom({ character, messages, inputValue, onInputChange, onSend, loading, activeNav, onNavigate, scene, stats }) {
+  var moodEmoji = character?.moodEmoji || '🥰';
+  var mood = character?.mood || '等待中';
+  var affection = typeof character?.affection === 'number' ? character.affection : 78;
+  var charName = character?.name || '她';
+  var charAvatar = character?.avatar || '';
+
+  // 转换消息层格式: role 'assistant' → 'ai', 'user' → 'user'
+  var displayMsgs = (messages || []).map(function(m) {
+    return {
+      id: m.id,
+      role: m.role === 'assistant' ? 'ai' : 'user',
+      content: m.content,
+      time: formatTime(m.ts)
+    };
+  });
+
+  var sceneText = scene || (character?.scenario ? character.scenario + ' · ' + (character?.personality || '') : '');
+
   return h('div', { 
     className: 'chat-room-shell',
     style: { 
@@ -26,13 +47,22 @@ export default function ChatRoom({ character, messages, inputValue, onInputChang
   },
     h(AtmosphereBackground),
     h(CharacterHero, { 
-      name: character?.name, 
-      avatar: character?.avatar, 
-      mood: character?.mood 
+      name: charName,
+      avatar: charAvatar,
+      mood: mood,
+      moodEmoji: moodEmoji,
+      affection: affection,
+      online: true
     }),
-    h(FloatingContent),
-    h(MessageLayer, { messages }),
-    h(InputDock, { value: inputValue, onChange: onInputChange, onSend, loading }),
-    h(BottomNavDock, { activeId: activeNav, onNavigate })
+    h(FloatingContent, {
+      stats: stats || [
+        { value: messages ? messages.filter(function(m) { return m.role === 'user'; }).length : 0, label: '消息' },
+        { value: affection + '%', label: '好感' }
+      ],
+      scene: sceneText
+    }),
+    h(MessageLayer, { messages: displayMsgs }),
+    h(InputDock, { value: inputValue, onChange: onInputChange, onSend: function() { if (inputValue && inputValue.trim()) { onSend && onSend(); } }, loading: loading, placeholder: '和' + charName + '说些什么...' }),
+    h(BottomNavDock, { activeId: activeNav || 'chat', onNavigate })
   );
 }
