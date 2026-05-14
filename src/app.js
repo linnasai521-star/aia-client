@@ -472,7 +472,7 @@ function App() {
     h('div', { className: 'app-shell' },
       h(ImmersiveSidebar),
       h('div', { className: 'page-content-area' },
-        page === 'chat' ? h(ChatRoom, {
+        page === 'chat' ? h(ImmersiveChatPage) :
           character: charCard,
           messages: msgs,
           inputValue: inputValue,
