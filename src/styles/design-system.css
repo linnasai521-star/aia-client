@@ -1,63 +1,75 @@
+/* Design System Variables - Anime + Glass Morphism */
 :root {
-  /* 主色 - 粉紫渐变 */
-  --primary-50: #fff1f6;
-  --primary-100: #ffe4ec;
-  --primary-200: #fecddc;
-  --primary-300: #fda4c2;
-  --primary-400: #fb6f9a;
-  --primary-500: #f43f7a;
-  --primary-600: #db2f6a;
+  /* 主色调 - 粉紫渐变 */
+  --primary-pink: #fda4c2;
+  --primary-purple: #a78bfa;
+  --primary-gradient: linear-gradient(135deg, #fda4c2 0%, #a78bfa 100%);
+  --primary-gradient-hover: linear-gradient(135deg, #fb6f9a 0%, #8b5cf6 100%);
   
-  /* 辅助色 - 淡紫 */
-  --secondary-50: #f5f3ff;
-  --secondary-100: #ede9fe;
-  --secondary-200: #ddd6fe;
-  --secondary-300: #c4b5fd;
-  --secondary-400: #a78bfa;
+  /* 背景色 */
+  --bg-primary: #fff5f8;
+  --bg-secondary: rgba(255, 255, 255, 0.85);
+  --bg-tertiary: rgba(255, 255, 255, 0.7);
+  --bg-glass: rgba(255, 255, 255, 0.6);
   
-  /* 背景系统 */
-  --bg-main: linear-gradient(135deg, #fff7fb 0%, #f5f3ff 50%, #eef2ff 100%);
-  --bg-card: rgba(255,255,255,0.6);
-  --bg-glass: rgba(255,255,255,0.4);
-  --bg-glass-strong: rgba(255,255,255,0.7);
-  --bg-input: rgba(255,255,255,0.5);
-  --bg-overlay: rgba(255,241,246,0.95);
+  /* 文本色 */
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
   
-  /* 文字色 */
-  --text-primary: #2d1b4e;
-  --text-secondary: #6b5b8a;
-  --text-muted: #9b8fb4;
-  --text-white: #ffffff;
-  
-  /* 玻璃边框 */
-  --glass-border: rgba(255,255,255,0.6);
-  --glass-border-focus: rgba(253,164,194,0.5);
+  /* 边框色 */
+  --border-light: rgba(253, 164, 194, 0.2);
+  --border-medium: rgba(253, 164, 194, 0.3);
+  --border-focus: rgba(253, 164, 194, 0.5);
   
   /* 阴影 */
-  --shadow-sm: 0 2px 8px rgba(180,130,200,0.08);
-  --shadow-md: 0 6px 20px rgba(180,130,200,0.12);
-  --shadow-lg: 0 12px 40px rgba(180,130,200,0.16);
-  --shadow-glow: 0 0 20px rgba(244,63,122,0.15);
+  --shadow-sm: 0 2px 8px rgba(244, 63, 122, 0.08);
+  --shadow-md: 0 4px 16px rgba(244, 63, 122, 0.12);
+  --shadow-lg: 0 8px 32px rgba(244, 63, 122, 0.15);
+  --shadow-glass: 0 8px 32px rgba(180, 130, 200, 0.12);
   
   /* 圆角 */
-  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 999px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
   
-  /* 间距 */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
+  /* 动画 */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
   
-  /* 字体 */
-  --font-main: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  --font-mono: "SF Mono", "Fira Code", monospace;
+  /* 毛玻璃效果 */
+  --glass-blur: blur(20px);
+  --glass-blur-light: blur(12px);
+  
+  /* 装饰 */
+  --orb-glow: rgba(253, 164, 194, 0.4);
+  --mesh-gradient: radial-gradient(circle at 20% 80%, rgba(253, 164, 194, 0.15) 0%, transparent 50%),
+                   radial-gradient(circle at 80% 20%, rgba(167, 139, 250, 0.15) 0%, transparent 50%);
+}
+
+/* 深色模式 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1b26;
+    --bg-secondary: rgba(30, 30, 46, 0.85);
+    --bg-tertiary: rgba(30, 30, 46, 0.7);
+    --bg-glass: rgba(30, 30, 46, 0.6);
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    
+    --border-light: rgba(253, 164, 194, 0.1);
+    --border-medium: rgba(253, 164, 194, 0.15);
+    --border-focus: rgba(253, 164, 194, 0.25);
+    
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
 }
