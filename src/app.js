@@ -14,7 +14,9 @@ import { CharacterPage } from './components/CharacterPage.js';
 import { MemoryPage } from './components/MemoryPage.js';
 import { LockScreen } from './components/LockScreen.js';
 import CharacterHall from './components/CharacterHall.js';
+import NewCharacterHall from './pages/CharacterHall.js';
 import ChatListPage from './components/ChatListPage.js';
+import ChatRoom from './pages/ChatRoom.js';
 import { parsePngCharacterCard } from './utils/pngParser.js';
 import { LoreBookEngine } from './utils/lorebookEngine.js';
 import { PromptAssembler, PromptComponents } from './utils/promptAssembler.js';
@@ -34,10 +36,12 @@ function App() {
   const [page, setPage] = useState('chat');
   const [loading, setLoading] = useState(false);
   const [stream, setStream] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [charCard, setCharCard] = useState(null);
   const [wb, setWB] = useState([]);
   const [models, setModels] = useState([]);
   const [memoryContext, setMemoryContext] = useState('');
+  const [allCharacters, setAllCharacters] = useState([]);
   const abortRef = useRef(null);
   const streamRef = useRef('');
   const loreBookEngine = useRef(new LoreBookEngine());
@@ -56,6 +60,7 @@ function App() {
       if (allSettings.pinHash) { setPinHash(allSettings.pinHash); setLocked(true); }
       setConvs(await db.getAllConversations());
       const chars = await db.getAllCharacters();
+      setAllCharacters(chars);
       if (chars.length) {
         const card = normalizeCharCard(chars[0]);
         setCharCard(card);
@@ -242,6 +247,7 @@ function App() {
         const normalized = normalizeCharCard(character);
         setCharCard(normalized);
         setSelectedCharacter(character);
+        setAllCharacters(function(prev) { return [character].concat(prev); });
         initRpEngine(normalized);
         console.log('[Import] Character saved:', { name: normalized.name, avatar: !!normalized.avatar, hasFirstMes: !!normalized.first_mes });
         return normalized;
@@ -466,15 +472,28 @@ function App() {
     h('div', { className: 'app-shell' },
       h(ImmersiveSidebar),
       h('div', { className: 'page-content-area' },
-        page === 'chat' ? h(ImmersiveChatPage) :
+        page === 'chat' ? h(ChatRoom, {
+          character: charCard,
+          messages: msgs,
+          inputValue: inputValue,
+          onInputChange: function(v) { setInputValue(v); },
+          onSend: function() { var v = inputValue; if (v.trim()) { sendMsg(v); setInputValue(''); } },
+          loading: loading,
+          activeNav: page,
+          onNavigate: function(id) { setPage(id); setSidebar(false); }
+        }) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
         page === 'character' ? h(CharacterPage) :
-        page === 'characterHall' ? h(CharacterHall, { onSelectCharacter: (char) => navigateToChatList(char) }) :
+        page === 'characterHall' ? h(NewCharacterHall, {
+          characters: allCharacters,
+          onSelectCharacter: function(char) { navigateToChatList(char); },
+          onNavigate: function(id) { setPage(id); setSidebar(false); }
+        }) :
         page === 'chatList' && selectedCharacter ? h(ChatListPage, {
           character: selectedCharacter,
-          onBack: () => setPage('characterHall'),
-          onOpenChat: (char, chat) => openChat(char, chat)
+          onBack: function() { setPage('characterHall'); },
+          onOpenChat: function(char, chat) { openChat(char, chat); }
         }) :
         h(ImmersiveChatPage)
       ),
