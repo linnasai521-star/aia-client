@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>角色大厅测试</title><style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#1a0a2e; overflow:hidden; height:100vh; }
+:root {
+  --bg-start:#1a0a2e; --bg-main:#2d1b4e; --bg-end:#1e1030;
+  --soft-accent:#a78bfa; --soft-purple:#f6b7d2; --soft-purple-light:rgba(167,139,250,0.05);
+  --glass-base:rgba(255,255,255,0.08); --glass-border:rgba(255,255,255,0.12);
+  --glass-hover:rgba(255,255,255,0.14); --glass-active:rgba(255,255,255,0.2);
+  --radius-sm:8px; --radius-md:16px; --radius-lg:20px; --radius-xl:28px; --radius-full:999px;
+  --blur-soft:8px; --blur-medium:16px; --blur-strong:25px; --blur-heavy:40px;
+}
+/* ====== Atmosphere ====== */
+.atmo-bg { position:fixed; inset:0; background:linear-gradient(160deg,var(--bg-end),var(--bg-main),var(--bg-start)); z-index:0; overflow:hidden; }
+.atmo-spot { position:absolute; border-radius:50%; will-change:transform; pointer-events:none; }
+.atmo-grid { position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px); background-size:40px 40px; opacity:0.5; }
+/* ====== Shell ====== */
+.nh-shell { position:fixed; inset:0; overflow:hidden; }
+.nh-scroll { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; padding:20px 16px 120px; z-index:1; -webkit-overflow-scrolling:touch; }
+.nh-title { font-size:18px; font-weight:700; color:#e8dff5; margin:24px 0 12px; }
+.nh-title:first-child { margin-top:0; }
+/* ====== Horizontal Scroll ====== */
+.nh-scroll-x { display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; }
+.nh-scroll-x::-webkit-scrollbar { height:0; }
+/* ====== Mood Cards ====== */
+.mood-card { flex-shrink:0; width:130px; background:rgba(255,255,255,0.1); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-radius:20px; padding:14px 10px; box-shadow:0 8px 24px rgba(110,80,150,0.1); scroll-snap-align:start; text-align:center; transition:transform .2s; border:1px solid rgba(255,255,255,0.08); }
+.mood-card:active { transform:scale(0.96); }
+.mood-avatar { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#a78bfa,#f6b7d2); display:flex; align-items:center; justify-content:center; margin:0 auto 8px; font-size:22px; color:white; }
+.mood-name { font-size:14px; font-weight:600; color:#e8dff5; margin-bottom:4px; }
+.mood-bubble { font-size:12px; color:#c4b5e8; background:rgba(167,139,250,0.1); border-radius:12px; padding:2px 10px; display:inline-block; }
+.mood-time { font-size:11px; color:#8b7daa; margin-top:6px; }
+/* ====== Recent Cards ====== */
+.recent-card { flex-shrink:0; width:80vw; max-width:320px; background:rgba(255,255,255,0.1); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-radius:20px; padding:20px; box-shadow:0 8px 24px rgba(110,80,150,0.1); scroll-snap-align:start; position:relative; overflow:hidden; transition:transform .2s; border:1px solid rgba(255,255,255,0.08); }
+.recent-card:active { transform:scale(0.96); }
+.recent-bg-icon { position:absolute; top:-20px; right:-10px; font-size:80px; opacity:0.08; pointer-events:none; }
+.recent-avatar { width:56px; height:56px; border-radius:16px; background:linear-gradient(135deg,#a78bfa,#f6b7d2); display:flex; align-items:center; justify-content:center; font-size:26px; color:white; margin-bottom:10px; }
+.recent-name { font-size:16px; font-weight:600; color:#e8dff5; margin-bottom:4px; }
+.recent-desc { font-size:13px; color:#b5a7cc; margin-bottom:8px; line-height:1.4; }
+.recent-time { font-size:11px; color:#8b7daa; }
+/* ====== Grid Cards ====== */
+.nh-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.char-card { background:rgba(255,255,255,0.1); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-radius:20px; padding:16px; box-shadow:0 8px 24px rgba(110,80,150,0.1); text-align:center; transition:transform .2s; cursor:pointer; border:1px solid rgba(255,255,255,0.08); }
+.char-card:active { transform:scale(0.96); }
+.char-card-avatar { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,#a78bfa,#f6b7d2); display:flex; align-items:center; justify-content:center; font-size:22px; color:white; margin:0 auto 8px; position:relative; }
+.char-card-halo { position:absolute; inset:-3px; border-radius:19px; background:#a78bfa; opacity:0.2; }
+.char-card-name { font-size:14px; font-weight:600; color:#e8dff5; margin-bottom:4px; }
+.char-card-desc { font-size:11px; color:#b5a7cc; margin-bottom:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.char-card-bar { height:3px; background:rgba(167,139,250,0.12); border-radius:2px; margin-bottom:4px; overflow:hidden; }
+.char-card-fill { height:100%; background:linear-gradient(90deg,#a78bfa,#f6b7d2); border-radius:2px; }
+.char-card-time { font-size:10px; color:#8b7daa; }
+/* ====== BottomNavDock ====== */
+.bnav-shell { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); width:fit-content; background:rgba(45,27,78,0.55); backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px); border-radius:28px; padding:8px 12px; display:flex; gap:4px; z-index:10; border:1px solid rgba(255,255,255,0.08); }
+.bnav-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 14px; border-radius:16px; border:none; background:transparent; cursor:pointer; transition:all .25s; }
+.bnav-icon { font-size:18px; transition:transform .25s; }
+.bnav-label { font-size:10px; font-weight:500; color:rgba(232,223,245,0.5); transition:color .25s; }
+.bnav-item.active .bnav-icon { transform:scale(1.15); }
+.bnav-item.active .bnav-label { color:#a78bfa; }
+.bnav-item.active::before { content:''; position:absolute; inset:-2px; border-radius:18px; background:rgba(167,139,250,0.15); animation:bnav-halo 2s infinite; }
+@keyframes bnav-halo { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:0.8;transform:scale(1.05)} }
+</style></head><body>
+<div class="atmo-bg">
+  <div class="atmo-spot" style="width:300px;height:300px;top:-5%;left:-5%;background:radial-gradient(circle,var(--soft-accent),transparent 70%);opacity:0.3;animation:drift1 16s infinite alternate"></div>
+  <div class="atmo-spot" style="width:240px;height:240px;bottom:15%;right:-3%;background:radial-gradient(circle,var(--soft-purple),transparent 70%);opacity:0.25;animation:drift2 20s infinite alternate"></div>
+  <div class="atmo-spot" style="width:180px;height:180px;top:40%;left:30%;background:radial-gradient(circle,var(--soft-accent),transparent 70%);opacity:0.12;animation:drift3 12s infinite alternate"></div>
+  <div class="atmo-spot" style="width:140px;height:140px;top:10%;right:15%;background:radial-gradient(circle,rgba(255,182,200,0.3),transparent 70%);opacity:0.2;animation:drift4 18s infinite alternate"></div>
+  <div class="atmo-spot" style="width:200px;height:200px;bottom:30%;left:5%;background:radial-gradient(circle,rgba(130,180,255,0.2),transparent 70%);opacity:0.15;animation:drift5 22s infinite alternate"></div>
+  <div class="atmo-grid"></div>
+</div>
+<div class="nh-shell"><div class="nh-scroll">
+<h2 class="nh-title">💭 此刻的心情</h2>
+<div class="nh-scroll-x">
+  <div class="mood-card"><div class="mood-avatar">🥰</div><div class="mood-name">她</div><div class="mood-bubble">想你了</div><div class="mood-time">刚刚</div></div>
+  <div class="mood-card"><div class="mood-avatar">😺</div><div class="mood-name">猫娘</div><div class="mood-bubble">等你摸头</div><div class="mood-time">5分钟前</div></div>
+  <div class="mood-card"><div class="mood-avatar">📚</div><div class="mood-name">学姐</div><div class="mood-bubble">正在看书</div><div class="mood-time">12分钟前</div></div>
+  <div class="mood-card"><div class="mood-avatar">👼</div><div class="mood-name">小天使</div><div class="mood-bubble">想出去玩</div><div class="mood-time">1小时前</div></div>
+</div>
+<h2 class="nh-title">🕐 最近互动</h2>
+<div class="nh-scroll-x">
+  <div class="recent-card"><div class="recent-bg-icon">✨</div><div class="recent-avatar">她</div><div class="recent-name">她</div><div class="recent-desc">陪了你很久的那个她</div><div class="recent-time">刚刚聊过</div></div>
+  <div class="recent-card"><div class="recent-bg-icon">✨</div><div class="recent-avatar">猫</div><div class="recent-name">猫娘</div><div class="recent-desc">调皮又粘人的小猫咪</div><div class="recent-time">今天 14:30</div></div>
+  <div class="recent-card"><div class="recent-bg-icon">✨</div><div class="recent-avatar">学</div><div class="recent-name">学姐</div><div class="recent-desc">温柔又知性的学姐</div><div class="recent-time">昨天 22:15</div></div>
+</div>
+<h2 class="nh-title">🎭 角色</h2>
+<div class="nh-grid">
+  <div class="char-card"><div class="char-card-avatar">她<div class="char-card-halo" style="opacity:0.56"></div></div><div class="char-card-name">她</div><div class="char-card-desc">一直在等你回来</div><div class="char-card-bar"><div class="char-card-fill" style="width:78%"></div></div><div class="char-card-time">刚刚</div></div>
+  <div class="char-card"><div class="char-card-avatar">猫<div class="char-card-halo" style="opacity:0.52"></div></div><div class="char-card-name">猫娘</div><div class="char-card-desc">喵~快来玩</div><div class="char-card-bar"><div class="char-card-fill" style="width:65%"></div></div><div class="char-card-time">今天 14:30</div></div>
+  <div class="char-card"><div class="char-card-avatar">学<div class="char-card-halo" style="opacity:0.44"></div></div><div class="char-card-name">学姐</div><div class="char-card-desc">安静地读着书</div><div class="char-card-bar"><div class="char-card-fill" style="width:42%"></div></div><div class="char-card-time">昨天 22:15</div></div>
+  <div class="char-card"><div class="char-card-avatar">天<div class="char-card-halo" style="opacity:0.48"></div></div><div class="char-card-name">小天使</div><div class="char-card-desc">今天也元气满满</div><div class="char-card-bar"><div class="char-card-fill" style="width:55%"></div></div><div class="char-card-time">3天前</div></div>
+  <div class="char-card"><div class="char-card-avatar">温<div class="char-card-halo" style="opacity:0.4"></div></div><div class="char-card-name">温柔姐姐</div><div class="char-card-desc">会照顾人的姐姐</div><div class="char-card-bar"><div class="char-card-fill" style="width:30%"></div></div><div class="char-card-time">上周</div></div>
+  <div class="char-card"><div class="char-card-avatar">恶<div class="char-card-halo" style="opacity:0.37"></div></div><div class="char-card-name">小恶魔</div><div class="char-card-desc">今天想怎么捉弄你呢</div><div class="char-card-bar"><div class="char-card-fill" style="width:20%"></div></div><div class="char-card-time">5月10日</div></div>
+  </div></div></div>
+<div class="bnav-shell">
+  <div class="bnav-item"><span class="bnav-icon">💬</span><span class="bnav-label">聊天</span></div>
+  <div class="bnav-item active"><span class="bnav-icon">🎭</span><span class="bnav-label">角色</span></div>
+  <div class="bnav-item"><span class="bnav-icon">🧠</span><span class="bnav-label">记忆</span></div>
+  <div class="bnav-item"><span class="bnav-icon">⚙️</span><span class="bnav-label">设置</span></div>
+</div>
+<script>
+@keyframes drift1 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(40px,30px) scale(1.15)} }
+@keyframes drift2 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(-30px,-20px) scale(1.1)} }
+@keyframes drift3 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(25px,-35px) scale(0.9)} }
+@keyframes drift4 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(-20px,25px) scale(1.2)} }
+@keyframes drift5 { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(15px,-15px) scale(0.95)} }
+</script>
+</body></html>
