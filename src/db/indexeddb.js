@@ -69,21 +69,25 @@ function open() {
         }
 
         // 2. messages 添加 chatId 索引（如果不存在）
-        const msgStore = tx.objectStore('messages');
-        if (msgStore && !msgStore.indexNames.contains('chatId')) {
-          msgStore.createIndex('chatId', 'chatId');
+        if (d.objectStoreNames.contains('messages')) {
+          const msgStore = tx.objectStore('messages');
+          if (!msgStore.indexNames.contains('chatId')) {
+            msgStore.createIndex('chatId', 'chatId');
+          }
         }
 
-        // 3. 为已有 conversations 迁移到 chats + 关联角色
+        // 3. 为已有角色创建默认 chat，并迁移消息
         if (d.objectStoreNames.contains('conversations') && d.objectStoreNames.contains('characters')) {
           const convStore = tx.objectStore('conversations');
           const charStore = tx.objectStore('characters');
           const chatStore = tx.objectStore('chats');
 
-          convStore.getAll().onsuccess = () => {
-            const convs = convStore.getAll().result || [];
-            charStore.getAll().onsuccess = () => {
-              const chars = charStore.getAll().result || [];
+          // 先获取所有对话
+          convStore.getAll().onsuccess = (ev) => {
+            const convs = ev.target.result || [];
+            // 再获取所有角色
+            charStore.getAll().onsuccess = (ev2) => {
+              const chars = ev2.target.result || [];
 
               // 为每个角色创建默认 chat
               for (const ch of chars) {
@@ -92,7 +96,6 @@ function open() {
                   ch.defaultChatId = chatId;
                   charStore.put(ch);
 
-                  // 创建默认聊天会话
                   chatStore.put({
                     chatId,
                     characterId: ch.id,
@@ -106,20 +109,26 @@ function open() {
                 }
               }
 
-              // 为已有对话关联到角色（如果对话有 characterId）
-              for (const cv of convs) {
-                if (cv.characterId) {
-                  const chatId = 'chat-' + cv.characterId;
-                  // 更新该对话下的消息，设置 chatId
-                  const msgStore2 = tx.objectStore('messages');
-                  const msgIdx = msgStore2.index('convId');
-                  msgIdx.getAll(IDBKeyRange.only(cv.id)).onsuccess = () => {
-                    const msgs = msgIdx.getAll().result || [];
-                    for (const m of msgs) {
-                      m.chatId = chatId;
-                      msgStore2.put(m);
-                    }
-                  };
+              // 为已有对话的消息关联 chatId
+              const msgStore = tx.objectStore('messages');
+              if (msgStore && msgStore.indexNames.contains('convId')) {
+                for (const cv of convs) {
+                  if (cv.characterId) {
+                    const chatId = 'chat-' + cv.characterId;
+                    const msgIdx = msgStore.index('convId');
+                    const r = msgIdx.openCursor(IDBKeyRange.only(cv.id));
+                    r.onsuccess = (ev3) => {
+                      const cursor = ev3.target.result;
+                      if (cursor) {
+                        const m = cursor.value;
+                        if (!m.chatId) {
+                          m.chatId = chatId;
+                          cursor.update(m);
+                        }
+                        cursor.continue();
+                      }
+                    };
+                  }
                 }
               }
             };
