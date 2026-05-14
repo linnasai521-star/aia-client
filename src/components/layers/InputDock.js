@@ -1,5 +1,4 @@
 import React from 'react';
-import './InputDock.css';
 
 const h = React.createElement;
 
