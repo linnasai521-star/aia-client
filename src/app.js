@@ -13,6 +13,8 @@ import { SettingsPage } from './components/SettingsPage.js';
 import { CharacterPage } from './components/CharacterPage.js';
 import { MemoryPage } from './components/MemoryPage.js';
 import { LockScreen } from './components/LockScreen.js';
+import CharacterHall from './components/CharacterHall.js';
+import ChatListPage from './components/ChatListPage.js';
 import { parsePngCharacterCard } from './utils/pngParser.js';
 import { LoreBookEngine } from './utils/lorebookEngine.js';
 import { PromptAssembler, PromptComponents } from './utils/promptAssembler.js';
@@ -42,6 +44,10 @@ function App() {
   const promptAssembler = useRef(new PromptAssembler());
   const tokenManager = useRef(new TokenContextManager());
 
+  // 新路由状态
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(null);
+
   // Init
   useEffect(() => { (async () => {
     try {
@@ -53,6 +59,7 @@ function App() {
       if (chars.length) {
         const card = normalizeCharCard(chars[0]);
         setCharCard(card);
+        setSelectedCharacter(chars[0]);
         initRpEngine(card);
       }
       setWB(await db.getWorldBook('_global'));
@@ -92,6 +99,47 @@ function App() {
         console.log('[RPEngine] Loaded', entries.length, 'lorebook entries');
       }
       promptAssembler.current.setFromCharacterCard(card);
+    }
+  }
+
+  // ===== 导航函数 =====
+  function navigateToCharacterHall() {
+    setPage('characterHall');
+    setSidebar(false);
+  }
+
+  function navigateToChatList(character) {
+    setSelectedCharacter(character);
+    setPage('chatList');
+  }
+
+  async function openChat(character, chat) {
+    setSelectedCharacter(character);
+    setSelectedChat(chat);
+    const normalized = normalizeCharCard(character);
+    setCharCard(normalized);
+    initRpEngine(normalized);
+    
+    const conv = {
+      id: genId(),
+      title: chat.title || '新对话',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      pinned: false,
+      characterId: character.id
+    };
+    await db.putConversation(conv);
+    setConvs(c => [conv, ...c]);
+    setCurId(conv.id);
+    setSidebar(false);
+    setPage('chat');
+    setMsgs([]);
+    
+    const fm = normalized.first_mes || normalized.firstMessage;
+    if (fm && fm.trim()) {
+      const initMsg = { id: genId()+'_init', convId: conv.id, role: 'assistant', content: fm, ts: Date.now() };
+      await db.putMessage(initMsg);
+      setMsgs([initMsg]);
     }
   }
 
@@ -141,9 +189,7 @@ function App() {
       let avatar = null;
       
       if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
-        // 创建avatar data URL
         avatar = URL.createObjectURL(file);
-        // 解析PNG元数据
         characterData = await parsePngCharacterCard(file);
         console.log('[Import] PNG parsed:', { name: characterData.name, hasPersonality: !!characterData.personality, hasFirstMes: !!characterData.first_mes, hasScenario: !!characterData.scenario, hasWorldbook: !!(characterData.worldbook?.length), tags: characterData.tags });
       } else if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
@@ -186,6 +232,7 @@ function App() {
         await db.putCharacter(character);
         const normalized = normalizeCharCard(character);
         setCharCard(normalized);
+        setSelectedCharacter(character);
         initRpEngine(normalized);
         console.log('[Import] Character saved:', { name: normalized.name, avatar: !!normalized.avatar, hasFirstMes: !!normalized.first_mes });
         return normalized;
@@ -369,7 +416,10 @@ function App() {
     importCharacterCard, importLoreBook,
     loreBookEngine: loreBookEngine.current,
     promptAssembler: promptAssembler.current,
-    tokenManager: tokenManager.current
+    tokenManager: tokenManager.current,
+    // 新路由暴露
+    selectedCharacter, selectedChat,
+    navigateToCharacterHall, navigateToChatList, openChat
   };
 
   if (!ready) return h('div', { className: 'empty-state' },
@@ -381,18 +431,18 @@ function App() {
 
   // 底部导航栏
   const navItems = [
-    { id: 'chat', icon: '💬', label: '聊天' },
-    { id: 'character', icon: '🎭', label: '角色' },
-    { id: 'memory', icon: '🧠', label: '记忆' },
-    { id: 'settings', icon: '⚙️', label: '设置' },
+    { id: 'chat', icon: '💬', label: '聊天', action: () => { if (!curId && charCard) { createConv(); } else { setPage('chat'); setSidebar(false); } } },
+    { id: 'character', icon: '🎭', label: '角色', action: () => navigateToCharacterHall() },
+    { id: 'memory', icon: '🧠', label: '记忆', action: () => { setPage('memory'); setSidebar(false); } },
+    { id: 'settings', icon: '⚙️', label: '设置', action: () => { setPage('settings'); setSidebar(false); } },
   ];
 
   const renderBottomNav = () => h('nav', { className: 'bottom-nav' },
     navItems.map(item =>
       h('button', {
         key: item.id,
-        className: 'bot-nav-item' + (page === item.id ? ' active' : ''),
-        onClick: () => { setPage(item.id); setMsgs([]); setCurId(null); setSidebar(false); }
+        className: 'bot-nav-item' + (page === item.id || (item.id === 'chat' && page === 'chat') ? ' active' : ''),
+        onClick: item.action
       },
         h('span', { className: 'bot-nav-icon' }, item.icon),
         h('span', { className: 'bot-nav-label' }, item.label)
@@ -408,6 +458,12 @@ function App() {
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
         page === 'character' ? h(CharacterPage) :
+        page === 'characterHall' ? h(CharacterHall, { onSelectCharacter: (char) => navigateToChatList(char) }) :
+        page === 'chatList' && selectedCharacter ? h(ChatListPage, {
+          character: selectedCharacter,
+          onBack: () => setPage('characterHall'),
+          onOpenChat: (char, chat) => openChat(char, chat)
+        }) :
         h(ImmersiveChatPage)
       ),
       renderBottomNav(),
