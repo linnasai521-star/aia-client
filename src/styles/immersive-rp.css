@@ -1,3 +1,121 @@
+/* ===== 角色状态感增强 ===== */
+
+/* 在线状态指示器 */
+.hall-status-dot, [class*="status-dot"] {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid white;
+  display: inline-block;
+}
+
+.status-online {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34,197,94,0.4);
+  animation: statusPulse 2.5s ease-in-out infinite;
+}
+
+.status-idle {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245,158,11,0.3);
+}
+
+.status-offline {
+  background: #94a3b8;
+}
+
+@keyframes statusPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+  50% { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+}
+
+/* 情绪气泡 */
+.mood-badge, [class*="mood"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(167,139,250,0.15);
+  border-radius: 20px;
+  font-size: 11px;
+  color: #8b6bae;
+  backdrop-filter: blur(8px);
+}
+
+/* 最近互动时间样式 */
+.last-interaction, [class*="last-int"] {
+  font-size: 12px;
+  color: #b0a4c8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 亲密度标签 */
+.intimacy-badge, [class*="intimacy"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, rgba(253,164,194,0.15), rgba(167,139,250,0.12));
+  border-radius: 20px;
+  font-size: 11px;
+  color: #a78bfa;
+  font-weight: 500;
+}
+
+/* 角色卡片呼吸轮廓 */
+.hall-card {
+  position: relative;
+  overflow: visible;
+}
+
+.hall-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius-sm, 18px) + 1px);
+  background: linear-gradient(135deg, rgba(253,164,194,0.2), rgba(167,139,250,0.2), rgba(253,164,194,0.2));
+  background-size: 200% 200%;
+  animation: cardBorderGlow 4s ease-in-out infinite;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.hall-card:active::after {
+  opacity: 1;
+}
+
+@keyframes cardBorderGlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* 空状态情感化 */
+.hall-empty-status, [class*="empty-mood"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 20px;
+  font-size: 13px;
+  color: #8c7a84;
+  margin-top: var(--space-3, 12px);
+}
+
+.hall-empty-status .mood-emoji {
+  font-size: 16px;
+  animation: moodBounce 2s ease-in-out infinite;
+}
+
+@keyframes moodBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
 /* ===== 新架构页面样式 ===== */
 
 /* ── 隔离与层级保护 ── */
