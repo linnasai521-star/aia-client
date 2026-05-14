@@ -1,5 +1,4 @@
 import React from 'react';
-import './BottomNavDock.css';
 
 const h = React.createElement;
 
