@@ -3,49 +3,193 @@
    ✦ 角色立绘/头像层：主导视觉存在
    ═══════════════════════════════════ */
 
-/* === 重构阶段1：调试样式 === */
+/* === 重构阶段3：角色Hero区域 === */
 .hero {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 35%; /* 固定高度：屏幕35% */
   z-index: 1;
-  pointer-events: none;
-  background: rgba(255,200,220,0.2); /* 调试色：淡粉色 */
+  pointer-events: none; /* 默认不可点击 */
+  background: transparent; /* 透明背景，不遮挡氛围层 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 15px;
 }
 
-/* === 重构阶段2+：正式样式（待启用） === */
-.avatarFrame {
-  position: relative;
-  width: 96px;
-  height: 96px;
+/* 在线状态指示条 */
+.online-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 20px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  border: 3px solid var(--glass-highlight, rgba(255,255,255,0.8));
-  box-shadow: var(--shadow-md, 0 4px 20px rgba(167,139,250,0.15));
+  background: var(--status-online, #22c55e);
+  box-shadow: 0 0 8px rgba(34,197,94,0.5);
+  animation: pulseOnline 2s ease-in-out infinite;
+}
+
+@keyframes pulseOnline {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+}
+
+/* 角色半身图容器 */
+.avatar-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
 }
 
 .avatar {
   width: 100%;
   height: 100%;
+  object-fit: cover;
   border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.3);
+  box-shadow: 0 4px 20px rgba(130,100,180,0.2);
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--soft-accent, #a78bfa), var(--soft-purple, #f6b7d2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 40px;
+  font-weight: 600;
+}
+
+/* 毛玻璃横条 */
+.glass-bar {
+  pointer-events: auto; /* 此区域可点击 */
+  width: calc(100% - 40px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  margin: 0 20px;
+  box-shadow: 0 8px 30px rgba(130,100,180,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.glass-bar:hover {
+  background: rgba(255,255,255,0.6);
+  transform: translateY(-2px);
+}
+
+.glass-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.glass-avatar img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.name {
-  font-size: 1.25rem;
+.glass-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--soft-accent, #a78bfa), var(--soft-purple, #f6b7d2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary, #44333d);
 }
 
-.mood {
-  display: inline-flex;
+.glass-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.character-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #44333d);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.affection-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+
+.affection-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--soft-accent, #a78bfa), var(--soft-purple, #f6b7d2));
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.affection-text {
+  font-size: 12px;
+  color: var(--text-secondary, #8c7a84);
+}
+
+/* 心情/标签文本 */
+.mood-text {
+  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 14px;
-  background: var(--glass-bg, rgba(255,255,255,0.65));
-  border: 1px solid var(--glass-border, rgba(255,255,255,0.45));
-  border-radius: var(--radius-full, 999px);
-  font-size: 0.8125rem;
-  color: var(--text-secondary, #8c7a84);
+  padding: 4px 12px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 16px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.8);
+}
+
+.mood-emoji {
+  font-size: 16px;
 }
