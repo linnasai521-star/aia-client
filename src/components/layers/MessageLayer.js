@@ -1,5 +1,4 @@
 import React from 'react';
-import './MessageLayer.css';
 
 const h = React.createElement;
 
