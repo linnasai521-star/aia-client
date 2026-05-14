@@ -1,5 +1,4 @@
 import React from 'react';
-import './AtmosphereBackground.css';
 
 const h = React.createElement;
 
