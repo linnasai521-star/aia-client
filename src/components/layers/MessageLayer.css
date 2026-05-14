@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════
+   layers/MessageLayer.module.css
+   ✦ 消息气泡层：聊天对话主体
+   ═══════════════════════════════════ */
+
+.scrollContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.messageRow {
+  display: flex;
+  gap: 8px;
+  animation: fadeInUp 0.3s ease;
+}
+
+.messageRowUser {
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-width: 80%;
+  padding: 12px 18px;
+  border-radius: 4px 20px 20px 20px;
+  line-height: 1.8;
+  font-size: 15px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.bubbleUser {
+  border-radius: 20px 4px 20px 20px;
+  background: linear-gradient(135deg, rgba(253,164,194,0.3), rgba(196,181,253,0.25));
+  border: 1px solid rgba(253,164,194,0.25);
+}
+
+.bubbleAI {
+  background: rgba(255,255,255,0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.7);
+}
+
+.time {
+  font-size: 10px;
+  color: var(--text-hint, #b0a4c8);
+  margin-top: 3px;
+  display: block;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
