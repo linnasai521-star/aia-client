@@ -9,10 +9,10 @@ import BottomNavDock from '../components/layers/BottomNavDock';
 const h = React.createElement;
 
 /**
- * ChatRoom — 聊天页面统一布局容器（重构阶段1）
- * 六个独立层在z轴上叠加，调试阶段使用半透明背景色确认层级
+ * ChatRoom — 聊天页面统一布局容器
+ * 六个独立层在z轴上叠加
  */
-export default function ChatRoom() {
+export default function ChatRoom({ character, messages, inputValue, onInputChange, onSend, loading, activeNav, onNavigate }) {
   return h('div', { 
     className: 'chat-room-shell',
     style: { 
@@ -25,10 +25,14 @@ export default function ChatRoom() {
     }
   },
     h(AtmosphereBackground),
-    h(CharacterHero),
+    h(CharacterHero, { 
+      name: character?.name, 
+      avatar: character?.avatar, 
+      mood: character?.mood 
+    }),
     h(FloatingContent),
-    h(MessageLayer),
-    h(InputDock),
-    h(BottomNavDock)
+    h(MessageLayer, { messages }),
+    h(InputDock, { value: inputValue, onChange: onInputChange, onSend, loading }),
+    h(BottomNavDock, { activeId: activeNav, onNavigate })
   );
 }
