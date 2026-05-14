@@ -120,13 +120,15 @@ function App() {
     setCharCard(normalized);
     initRpEngine(normalized);
     
+    // 创建新对话并关联 chatId
     const conv = {
       id: genId(),
       title: chat.title || '新对话',
       createdAt: Date.now(),
       updatedAt: Date.now(),
       pinned: false,
-      characterId: character.id
+      characterId: character.id,
+      chatId: chat.chatId
     };
     await db.putConversation(conv);
     setConvs(c => [conv, ...c]);
@@ -135,9 +137,16 @@ function App() {
     setPage('chat');
     setMsgs([]);
     
+    // 更新 chat 的 lastMessageAt
+    try {
+      chat.lastMessageAt = Date.now();
+      chat.updatedAt = Date.now();
+      await db.putChat(chat);
+    } catch(e) { /* ignore */ }
+    
     const fm = normalized.first_mes || normalized.firstMessage;
     if (fm && fm.trim()) {
-      const initMsg = { id: genId()+'_init', convId: conv.id, role: 'assistant', content: fm, ts: Date.now() };
+      const initMsg = { id: genId()+'_init', convId: conv.id, role: 'assistant', content: fm, ts: Date.now(), chatId: chat.chatId };
       await db.putMessage(initMsg);
       setMsgs([initMsg]);
     }
@@ -149,7 +158,7 @@ function App() {
   }, []);
 
   const createConv = useCallback(async () => {
-    const conv = { id: genId(), title: '新对话', createdAt: Date.now(), updatedAt: Date.now(), pinned: false };
+    const conv = { id: genId(), title: '新对话', createdAt: Date.now(), updatedAt: Date.now(), pinned: false, characterId: selectedCharacter?.id || charCard?.id || null };
     await db.putConversation(conv);
     setConvs(c => [conv, ...c]);
     setCurId(conv.id);
@@ -166,7 +175,7 @@ function App() {
         console.log('[RPEngine] Auto-inserted first_mes');
       }
     }
-  }, [charCard]);
+  }, [charCard, selectedCharacter]);
 
   const delConv = useCallback(async (id) => {
     await db.deleteConversation(id);
@@ -275,7 +284,7 @@ function App() {
   const sendMsg = useCallback(async (content) => {
     if (!content.trim() || loading || !curId) return;
     
-    const userMsg = { id: genId(), convId: curId, role: 'user', content, ts: Date.now() };
+    const userMsg = { id: genId(), convId: curId, role: 'user', content, ts: Date.now(), chatId: selectedChat?.chatId };
     await db.putMessage(userMsg);
     const allMsgs = await db.getAllMessages(curId);
     setMsgs(allMsgs);
@@ -360,7 +369,7 @@ function App() {
         ctrl.signal,
         (full) => { streamRef.current = full; setStream(full); },
         async (full) => {
-          const am = { id: genId(), convId: curId, role: 'assistant', content: full || '(空响应)', ts: Date.now() };
+          const am = { id: genId(), convId: curId, role: 'assistant', content: full || '(空响应)', ts: Date.now(), chatId: selectedChat?.chatId };
           await db.putMessage(am); setMsgs(m => [...m, am]); setStream(''); setLoading(false); abortRef.current = null;
         },
         async (err) => {
@@ -373,10 +382,10 @@ function App() {
         { maxTokens: parseInt(fresh.maxTokens) || 4096, temperature: parseFloat(fresh.temperature) || 0.7, topP: parseFloat(fresh.topP) || 1 },
         ctrl.signal
       ).then(async (resp) => {
-        const am = { id: genId(), convId: curId, role: 'assistant', content: resp || '(空响应)', ts: Date.now() };
+        const am = { id: genId(), convId: curId, role: 'assistant', content: resp || '(空响应)', ts: Date.now(), chatId: selectedChat?.chatId };
         await db.putMessage(am); setMsgs(m => [...m, am]); setLoading(false); abortRef.current = null;
       }).catch(async (err) => {
-        const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now() };
+        const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now(), chatId: selectedChat?.chatId };
         await db.putMessage(em); setMsgs(m => [...m, em]); setLoading(false); abortRef.current = null;
       });
     }
@@ -438,16 +447,19 @@ function App() {
   ];
 
   const renderBottomNav = () => h('nav', { className: 'bottom-nav' },
-    navItems.map(item =>
-      h('button', {
+    navItems.map(item => {
+      const isActive = page === item.id
+        || (item.id === 'character' && (page === 'characterHall' || page === 'chatList'))
+        || (item.id === 'chat' && (page === 'chatList' || page === 'chat'));
+      return h('button', {
         key: item.id,
-        className: 'bot-nav-item' + (page === item.id || (item.id === 'chat' && page === 'chat') ? ' active' : ''),
+        className: 'bot-nav-item' + (isActive ? ' active' : ''),
         onClick: item.action
       },
         h('span', { className: 'bot-nav-icon' }, item.icon),
         h('span', { className: 'bot-nav-label' }, item.label)
-      )
-    )
+      );
+    })
   );
 
   return h(Ctx.Provider, { value: ctx },
