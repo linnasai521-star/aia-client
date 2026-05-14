@@ -1,5 +1,4 @@
 import React from 'react';
-import './CharacterHero.css';
 
 const h = React.createElement;
 
