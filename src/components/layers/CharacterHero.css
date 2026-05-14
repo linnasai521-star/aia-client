@@ -1,0 +1,46 @@
+/* ═══════════════════════════════════
+   layers/CharacterHero.module.css
+   ✦ 角色立绘/头像层：主导视觉存在
+   ═══════════════════════════════════ */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 0;
+}
+
+.avatarFrame {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 3px solid var(--glass-highlight, rgba(255,255,255,0.8));
+  box-shadow: var(--shadow-md, 0 4px 20px rgba(167,139,250,0.15));
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary, #44333d);
+}
+
+.mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  background: var(--glass-bg, rgba(255,255,255,0.65));
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.45));
+  border-radius: var(--radius-full, 999px);
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #8c7a84);
+}
