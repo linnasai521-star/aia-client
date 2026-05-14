@@ -5,7 +5,6 @@ import FloatingContent from '../components/layers/FloatingContent';
 import MessageLayer from '../components/layers/MessageLayer';
 import InputDock from '../components/layers/InputDock';
 import BottomNavDock from '../components/layers/BottomNavDock';
-import { renderMarkdown } from '../utils/markdown.js';
 
 const h = React.createElement;
 
