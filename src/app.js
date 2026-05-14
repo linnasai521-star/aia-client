@@ -473,15 +473,6 @@ function App() {
       h(ImmersiveSidebar),
       h('div', { className: 'page-content-area' },
         page === 'chat' ? h(ImmersiveChatPage) :
-          character: charCard,
-          messages: msgs,
-          inputValue: inputValue,
-          onInputChange: function(v) { setInputValue(v); },
-          onSend: function() { var v = inputValue; if (v.trim()) { sendMsg(v); setInputValue(''); } },
-          loading: loading,
-          activeNav: page,
-          onNavigate: function(id) { setPage(id); setSidebar(false); }
-        }) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
         page === 'character' ? h(CharacterPage) :
