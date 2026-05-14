@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Message Test</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;font-family:sans-serif;background:linear-gradient(160deg,#f5f0fa,#fff7fb 50%,#ffd7ea)}
+.scroll{position:fixed;top:35%;bottom:100px;left:0;right:0;z-index:3;overflow-y:auto;padding:20px 16px;background:transparent}
+.row{display:flex;margin-bottom:16px}
+.row.user{justify-content:flex-end}
+.msg{max-width:85%;padding:14px 18px;line-height:1.8;font-size:15px}
+.msg.ai{background:rgba(255,255,255,.65);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.7);border-radius:18px 18px 18px 4px;box-shadow:0 2px 16px rgba(130,100,180,.06);color:#44333d}
+.msg.user{background:rgba(180,160,220,.5);border-radius:18px 18px 4px 18px;color:#3b2f4a}
+.time{font-size:11px;color:#b0a4c8;display:block;margin-top:4px;opacity:.7}
+.hero{position:fixed;top:0;left:0;right:0;height:35%;display:flex;align-items:center;justify-content:center;z-index:2;color:rgba(0,0,0,.2);font-size:20px}
+.input{position:fixed;bottom:0;left:0;right:0;height:100px;display:flex;align-items:center;justify-content:center;z-index:5;background:rgba(255,255,255,.8);color:rgba(0,0,0,.2)}
+.scroll::-webkit-scrollbar{width:3px}
+.scroll::-webkit-scrollbar-thumb{background:rgba(167,139,250,.2);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="hero">Hero Area (35%)</div>
+<div class="input">Input Area (100px)</div>
+<div class="scroll">
+<div class="row"><div class="msg ai">你来啦，今天过得好吗？<span class="time">12:01</span></div></div>
+<div class="row user"><div class="msg user">还不错，你呢？<span class="time">12:01</span></div></div>
+<div class="row"><div class="msg ai">我一直在等你回来，很想你。<span class="time">12:02</span></div></div>
+<div class="row"><div class="msg ai">那天傍晚的海边，夕阳把天空染成了橙红色，像一幅画。<span class="time">12:06</span></div></div>
+<div class="row user"><div class="msg user">说得真好！<span class="time">12:07</span></div></div>
+<div class="row"><div class="msg ai">如果你在就好了，我们可以一起在沙滩上散步。<span class="time">12:08</span></div></div>
+<div class="row"><div class="msg ai">以后一定要一起去。说好了。<span class="time">12:09</span></div></div>
+<div class="row user"><div class="msg user">嗯，说好了！😊<span class="time">12:10</span></div></div>
+<div class="row"><div class="msg ai">你知道吗？每次和你聊天，时间过得特别快。<span class="time">12:15</span></div></div>
+<div class="row user"><div class="msg user">我也是，和你聊天最开心。<span class="time">12:16</span></div></div>
+<div style="height:40px"></div>
+</div>
+</body>
+</html>
