@@ -1,0 +1,45 @@
+/* ═══════════════════════════════════
+   layers/AtmosphereBackground.module.css
+   ✦ 背景氛围层：渐变光晕、粒子动画
+   ═══════════════════════════════════ */
+
+.wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.orbTop {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.12;
+  top: -10%;
+  left: -5%;
+  background: linear-gradient(135deg, var(--soft-accent, #a78bfa), var(--soft-purple, #f6b7d2));
+  animation: floatOrb 12s ease-in-out infinite;
+}
+
+.orbBottom {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.1;
+  bottom: -8%;
+  right: -5%;
+  background: linear-gradient(135deg, var(--soft-purple, #f6b7d2), var(--soft-accent, #a78bfa));
+  animation: floatOrb 10s ease-in-out infinite reverse;
+}
+
+@keyframes floatOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(10px, -15px) scale(1.02); }
+  50% { transform: translate(-5px, -25px) scale(1.05); }
+  75% { transform: translate(-15px, -10px) scale(1.02); }
+}
