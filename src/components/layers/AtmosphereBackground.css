@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════
    layers/AtmosphereBackground.module.css
-   ✦ 背景氛围层：渐变光晕、粒子动画
+   ✦ 背景氛围层：多层渐变、移动光斑、网格纹理
    ═══════════════════════════════════ */
 
-/* === 重构阶段1：调试样式 === */
-.wrapper {
+/* === 重构阶段2：正式氛围背景 === */
+.atmo-wrapper {
   position: fixed;
   top: 0;
   left: 0;
@@ -12,39 +12,131 @@
   height: 100%;
   z-index: 0;
   pointer-events: none;
-  background: rgba(200,180,255,0.2); /* 调试色：淡紫色 */
+  overflow: hidden;
+  /* 底层：浅紫到粉白线性渐变（160deg） */
+  background: linear-gradient(160deg, 
+    var(--bg-end, #f5f0fa) 0%, 
+    var(--bg-main, #fff7fb) 50%, 
+    var(--soft-purple-light, #ffd7ea) 100%
+  );
+  will-change: transform;
 }
 
-/* === 重构阶段2+：正式样式（待启用） === */
-.orbTop {
+/* === 光斑基础样式 === */
+.atmo-orb {
   position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  will-change: transform;
+  opacity: 0.15;
+}
+
+/* 光斑1：顶部左侧 - 淡紫色 */
+.atmo-orb-1 {
   width: 300px;
   height: 300px;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.12;
-  top: -10%;
+  top: -5%;
   left: -5%;
-  background: linear-gradient(135deg, var(--soft-accent, #a78bfa), var(--soft-purple, #f6b7d2));
-  animation: floatOrb 12s ease-in-out infinite;
+  background: radial-gradient(circle, var(--soft-accent, #a78bfa) 0%, transparent 70%);
+  animation: driftOrb1 25s ease-in-out infinite;
 }
 
-.orbBottom {
-  position: absolute;
+/* 光斑2：顶部右侧 - 淡粉色 */
+.atmo-orb-2 {
   width: 250px;
   height: 250px;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.1;
-  bottom: -8%;
-  right: -5%;
-  background: linear-gradient(135deg, var(--soft-purple, #f6b7d2), var(--soft-accent, #a78bfa));
-  animation: floatOrb 10s ease-in-out infinite reverse;
+  top: 10%;
+  right: -3%;
+  background: radial-gradient(circle, var(--soft-purple, #f6b7d2) 0%, transparent 70%);
+  animation: driftOrb2 30s ease-in-out infinite;
 }
 
-@keyframes floatOrb {
+/* 光斑3：中部中央 - 浅紫白 */
+.atmo-orb-3 {
+  width: 400px;
+  height: 400px;
+  top: 30%;
+  left: 20%;
+  background: radial-gradient(circle, var(--soft-accent-light, #c4b5fd) 0%, transparent 70%);
+  animation: driftOrb3 35s ease-in-out infinite;
+  opacity: 0.1;
+}
+
+/* 光斑4：底部左侧 - 淡粉紫 */
+.atmo-orb-4 {
+  width: 200px;
+  height: 200px;
+  bottom: 10%;
+  left: 10%;
+  background: radial-gradient(circle, var(--soft-purple-light, #ffd7ea) 0%, transparent 70%);
+  animation: driftOrb4 20s ease-in-out infinite;
+  opacity: 0.12;
+}
+
+/* 光斑5：底部右侧 - 淡紫蓝 */
+.atmo-orb-5 {
+  width: 350px;
+  height: 350px;
+  bottom: -5%;
+  right: 15%;
+  background: radial-gradient(circle, var(--soft-accent, #a78bfa) 0%, transparent 70%);
+  animation: driftOrb5 28s ease-in-out infinite;
+  opacity: 0.08;
+}
+
+/* === 网格纹理层 === */
+.atmo-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+  opacity: 0.03;
+  background-image: 
+    linear-gradient(rgba(167,139,250,0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167,139,250,0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: gridFade 8s ease-in-out infinite;
+}
+
+/* === 光斑动画 === */
+@keyframes driftOrb1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(10px, -15px) scale(1.02); }
-  50% { transform: translate(-5px, -25px) scale(1.05); }
-  75% { transform: translate(-15px, -8px) scale(1.02); }
+  25% { transform: translate(30px, -20px) scale(1.05); }
+  50% { transform: translate(-10px, -40px) scale(1.02); }
+  75% { transform: translate(-25px, -10px) scale(1.08); }
+}
+
+@keyframes driftOrb2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-40px, 20px) scale(1.03); }
+  50% { transform: translate(15px, 35px) scale(1.06); }
+  75% { transform: translate(30px, -15px) scale(1.04); }
+}
+
+@keyframes driftOrb3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(20px, -30px) scale(1.04); }
+  50% { transform: translate(-25px, -15px) scale(1.02); }
+  75% { transform: translate(10px, 20px) scale(1.06); }
+}
+
+@keyframes driftOrb4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-20px, 15px) scale(1.03); }
+  50% { transform: translate(15px, -25px) scale(1.05); }
+  75% { transform: translate(25px, 10px) scale(1.02); }
+}
+
+@keyframes driftOrb5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(35px, -20px) scale(1.02); }
+  50% { transform: translate(-15px, 30px) scale(1.06); }
+  75% { transform: translate(-30px, -10px) scale(1.04); }
+}
+
+@keyframes gridFade {
+  0%, 100% { opacity: 0.03; }
+  50% { opacity: 0.06; }
 }
