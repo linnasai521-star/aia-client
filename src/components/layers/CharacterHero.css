@@ -3,14 +3,19 @@
    ✦ 角色立绘/头像层：主导视觉存在
    ═══════════════════════════════════ */
 
+/* === 重构阶段1：调试样式 === */
 .hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(255,200,220,0.2); /* 调试色：淡粉色 */
 }
 
+/* === 重构阶段2+：正式样式（待启用） === */
 .avatarFrame {
   position: relative;
   width: 96px;
