@@ -3,15 +3,19 @@
    ✦ 消息气泡层：聊天对话主体
    ═══════════════════════════════════ */
 
+/* === 重构阶段1：调试样式 === */
 .scrollContainer {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  background: rgba(255,255,200,0.2); /* 调试色：淡黄色 */
 }
 
+/* === 重构阶段2+：正式样式（待启用） === */
 .messageRow {
   display: flex;
   gap: 8px;
