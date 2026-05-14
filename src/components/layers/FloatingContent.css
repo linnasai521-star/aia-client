@@ -3,7 +3,6 @@
    ✦ 浮动内容层：快捷操作、统计、场景描述
    ═══════════════════════════════════ */
 
-/* === 重构阶段1：调试样式 === */
 .floatingArea {
   position: fixed;
   top: 0;
@@ -12,10 +11,9 @@
   height: 100%;
   z-index: 2;
   pointer-events: none;
-  background: rgba(200,255,220,0.2); /* 调试色：淡绿色 */
+  background: transparent;
 }
 
-/* === 重构阶段2+：正式样式（待启用） === */
 .statsRow {
   display: flex;
   justify-content: center;
