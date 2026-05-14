@@ -3,19 +3,19 @@
    ✦ 底部导航停靠层：全局导航
    ═══════════════════════════════════ */
 
+/* === 重构阶段1：调试样式 === */
 .dock {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  height: 60px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: rgba(248,244,255,0.92);
-  backdrop-filter: blur(24px);
-  border-top: 1px solid rgba(200,180,220,0.12);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   z-index: 10;
+  pointer-events: none;
+  background: rgba(255,220,200,0.3); /* 调试色：淡橙色 */
 }
 
+/* === 重构阶段2+：正式样式（待启用） === */
 .item {
   display: flex;
   flex-direction: column;
