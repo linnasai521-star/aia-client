@@ -105,6 +105,23 @@ export function ImmersiveChatPage() {
               h('div', { className: 'char-environment' }, env)
             )
         ),
+        h('div', { className: 'chat-header-meta', style: { justifyContent: 'center', marginTop: '8px' } },
+          h('span', { className: 'last-interaction' }, '🕐 最近：刚刚')
+        ),
+        h('div', { className: 'stats-row' },
+          h('div', { className: 'stat-item' },
+            h('div', { style: { fontSize: '16px', fontWeight: '600', color: '#a78bfa' } }, '1'),
+            h('div', { style: { fontSize: '11px', color: '#b0a4c8' } }, '对话')
+          ),
+          h('div', { className: 'stat-item' },
+            h('div', { style: { fontSize: '16px', fontWeight: '600', color: '#a78bfa' } }, '今天'),
+            h('div', { style: { fontSize: '11px', color: '#b0a4c8' } }, '陪伴')
+          ),
+          h('div', { className: 'stat-item' },
+            h('div', { style: { fontSize: '16px', fontWeight: '600', color: '#a78bfa' } }, '❤️'),
+            h('div', { style: { fontSize: '11px', color: '#b0a4c8' } }, '亲密度')
+          )
+        ),
         h('div', { className: 'quick-actions' },
           h('button', { className: 'quick-action-btn', onClick: () => handleQuickAction('你好') }, '👋 打招呼'),
           h('button', { className: 'quick-action-btn', onClick: () => handleQuickAction('今天过得怎么样？') }, '🌤️ 问候'),
@@ -124,8 +141,14 @@ export function ImmersiveChatPage() {
     h('div', { className: 'chat-header' },
       h('button', { className: 'chat-back-btn', onClick: () => ctx.setSidebar(!ctx.sidebar) }, '☰'),
       ca ? h('img', { className: 'chat-avatar-sm', src: ca, alt: cn }) : null,
-      h('span', { className: 'chat-char-name' }, hasCharacter ? cn : '深夜陪伴'),
-      hasCharacter ? h('span', { className: 'chat-status' }, '● 在线') : null,
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('span', { className: 'chat-char-name' }, hasCharacter ? cn : '深夜陪伴'),
+        h('div', { className: 'chat-header-meta' },
+          h('span', { className: 'chat-online-dot' }),
+          h('span', { style: { fontSize: '12px', color: '#8b6bae' } }, '在线'),
+          h('span', { className: 'chat-mood' }, mood.emoji + ' ' + mood.text)
+        )
+      ),
       h('button', { className: 'chat-back-btn', onClick: () => ctx.setPage('character'), style: { marginLeft: 'auto' } }, '🎭'),
       h('button', { className: 'chat-back-btn', onClick: () => ctx.setPage('settings') }, '⚙️')
     ),
