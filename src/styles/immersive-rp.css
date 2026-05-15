@@ -1,3 +1,23 @@
+/* ===== 强制横排文字修复 ===== */
+* {
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  columns: unset !important;
+  column-count: unset !important;
+  column-width: unset !important;
+}
+
+.msg-ai-bubble, .msg-user-bubble, [class*="bubble"] {
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+chat-page, [class*="chat"] {
+  writing-mode: horizontal-tb !important;
+}
+
 /* === LEGACY GLOBAL STYLES — 禁止新增, 将逐步废弃 === */
 
 /* 头部状态信息 */
