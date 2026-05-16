@@ -47,6 +47,8 @@ function App() {
   // 新路由状态
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [pageHistory, setPageHistory] = useState([]);
 
   // Init
   useEffect(() => { (async () => {
@@ -151,6 +153,32 @@ function App() {
       setMsgs([initMsg]);
     }
   }
+
+  const createChat = useCallback(async () => {
+    const charId = charCard?.id;
+    if (!charId) return;
+    const chatId = genId();
+    await db.putChat({ chatId, characterId: charId, title: '新对话', createdAt: Date.now(), updatedAt: Date.now(), lastMessageAt: Date.now(), summary: '', messageCount: 0 });
+    setCurrentChatId(chatId);
+    setPage('chat');
+    if (charCard?.first_mes) {
+      const m = { id: genId()+'_init', chatId, role: 'assistant', content: charCard.first_mes, ts: Date.now() };
+      await db.putMessage(m);
+      setMsgs([m]);
+      await db.updateChat(chatId, { summary: charCard.first_mes.substring(0,50), messageCount: 1 });
+    }
+  }, [charCard]);
+
+  const openExistingChat = useCallback(async (chat) => {
+    setCurrentChatId(chat.chatId);
+    setPage('chat');
+    const chatMsgs = await db.getMessagesByChatId(chat.chatId);
+    setMsgs(chatMsgs);
+    if (chat.characterId) {
+      const ch = await db.getCharacter(chat.characterId);
+      if (ch) setCharCard({ ...ch, first_mes: ch.first_mes || ch.firstMessage || '', mes_example: ch.mes_example || '', system_prompt: ch.system_prompt || '' });
+    }
+  }, []);
 
   const saveSetting = useCallback(async (key, value) => {
     await db.setSetting(key, value);
@@ -557,7 +585,8 @@ function App() {
     tokenManager: tokenManager.current,
     // 新路由暴露
     selectedCharacter, selectedChat,
-    navigateToCharacterHall, navigateToChatList, openChat
+    navigateToCharacterHall, navigateToChatList, openChat,
+    currentChatId, setCurrentChatId, createChat, openExistingChat, pageHistory, setPageHistory, page, setPage
   };
 
   if (!ready) return h('div', { className: 'empty-state' },
@@ -569,7 +598,7 @@ function App() {
 
   // 底部导航栏
   const navItems = [
-    { id: 'chat', icon: '💬', label: '聊天', action: () => { if (!curId && charCard) { createConv(); } else { setPage('chat'); setSidebar(false); } } },
+    { id: 'chat', icon: '💬', label: '聊天', action: () => { if (charCard) { setPage('chatList'); setSidebar(false); } else { setPage('characterHall'); setSidebar(false); } } },
     { id: 'character', icon: '🎭', label: '角色', action: () => navigateToCharacterHall() },
     { id: 'memory', icon: '🧠', label: '记忆', action: () => { setPage('memory'); setSidebar(false); } },
     { id: 'settings', icon: '⚙️', label: '设置', action: () => { setPage('settings'); setSidebar(false); } },
@@ -600,10 +629,10 @@ function App() {
         page === 'memory' ? h(MemoryPage) :
         page === 'character' ? h(CharacterPage) :
         page === 'characterHall' ? h(CharacterHall, { onSelectCharacter: (char) => navigateToChatList(char) }) :
-        page === 'chatList' && selectedCharacter ? h(ChatListPage, {
-          character: selectedCharacter,
-          onBack: function() { setPage('characterHall'); },
-          onOpenChat: function(char, chat) { openChat(char, chat); }
+        page === 'chatList' && charCard ? h(ChatListPage, {
+          characterId: charCard.id,
+          onSelectChat: (chat) => openExistingChat(chat),
+          onBack: () => setPage('characterHall')
         }) :
         h(ImmersiveChatPage)
       ),
