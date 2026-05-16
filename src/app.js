@@ -353,9 +353,125 @@ function App() {
       characterCard: charCard
     });
     
+    // ===== 第 1.1 步：构建完整 system prompt（覆盖 managed.systemPrompt） =====
+    console.log('=== Prompt Assembly Start ===');
+    
+    let systemPrompt = '';
+    const charName = charCard?.name || '角色';
+    
+    // 角色身份指令
+    if (charName) {
+      systemPrompt += `你现在正在扮演「${charName}」。你必须始终以该角色的身份、性格和说话方式回复。不要承认自己是AI，不要打破角色，不要使用任何语言模型的口吻。\n\n`;
+    }
+    
+    // 角色描述
+    if (charCard?.description && charCard.description.trim()) {
+      systemPrompt += `[角色描述]\n${charCard.description}\n\n`;
+    }
+    
+    // 角色性格
+    if (charCard?.personality && charCard.personality.trim()) {
+      systemPrompt += `[角色性格]\n${charCard.personality}\n\n`;
+    }
+    
+    // 场景设定
+    if (charCard?.scenario && charCard.scenario.trim()) {
+      systemPrompt += `[场景设定]\n${charCard.scenario}\n\n`;
+    }
+    
+    // 系统提示词（角色卡自带的system_prompt）
+    if (charCard?.system_prompt && charCard.system_prompt.trim()) {
+      systemPrompt += `[角色指令]\n${charCard.system_prompt}\n\n`;
+    }
+    
+    // 示例对话
+    if (charCard?.mes_example && charCard.mes_example.trim()) {
+      systemPrompt += `[对话示例]\n${charCard.mes_example}\n\n`;
+    }
+    
+    // 世界书触发内容
+    const allLoreEntries = loreBookEngine.current.getAllEntries();
+    if (allLoreEntries.length > 0) {
+      const triggeredEntries = loreBookEngine.current.trigger(content);
+      console.log('[Worldbook] Total loaded:', allLoreEntries.length, '| Triggered:', triggeredEntries.length);
+      
+      if (triggeredEntries.length > 0) {
+        let loreText = '[世界知识]\n以下是你知道的世界设定，请在回复中自然地结合这些知识：\n';
+        triggeredEntries.forEach(entry => {
+          if (entry.content) {
+            loreText += entry.content + '\n';
+            console.log('[Worldbook] Injected:', entry.comment || 'entry-' + entry.id);
+          }
+        });
+        systemPrompt += loreText + '\n';
+      }
+    }
+    
+    // 对话规则（防止AI跳出角色）
+    systemPrompt += `[对话规则]\n`;
+    systemPrompt += `1. 你就是「${charName}」，永远不要脱离这个角色\n`;
+    systemPrompt += `2. 不要说"作为AI"、"我是语言模型"、"我是助手"等破坏角色的话\n`;
+    systemPrompt += `3. 回复要符合角色的性格、语气和说话方式\n`;
+    systemPrompt += `4. 用括号描写动作和心情，如"（微微笑）"、"（轻轻叹了口气）"\n`;
+    systemPrompt += `5. 回复要有真实情感，像真人在说话\n`;
+    systemPrompt += `6. 回复长度适中（50-300字），不要太空洞也不要太冗长\n`;
+    systemPrompt += `7. 不要总结对话，不要解释你的设定\n`;
+    systemPrompt += `8. 不要说"你想要我做什么"、"请问还有什么问题"等客服话\n`;
+    systemPrompt += `9. 像一个真实的人一样与用户互动，保持角色的个性\n`;
+    systemPrompt += `10. 回复风格参考该角色的示例对话\n\n`;
+    
+    // 首句提醒
+    if (charCard?.first_mes && charCard.first_mes.trim()) {
+      systemPrompt += `[开场记忆]\n你之前说过这段话：「${charCard.first_mes.substring(0, 200)}」\n请继续以这个角色状态和用户交流。\n\n`;
+    }
+    
+    console.log('[Prompt] Final system prompt length:', systemPrompt.length);
+    console.log('[Prompt] Preview:', systemPrompt.substring(0, 300));
+    console.log('=== Prompt Assembly End ===');
+    // ===== system prompt 构建结束 =====
+    
+    // ===== 第 1.2 步：构建 apiMsgs =====
     const apiMsgs = [];
-    if (managed.systemPrompt) apiMsgs.push({ role: 'system', content: managed.systemPrompt });
-    for (const msg of managed.messages) apiMsgs.push(msg);
+    
+    // 第一条：system prompt（强制非空）
+    if (systemPrompt) {
+      apiMsgs.push({ role: 'system', content: systemPrompt });
+    } else if (managed.systemPrompt) {
+      apiMsgs.push({ role: 'system', content: managed.systemPrompt });
+    }
+    
+    // 后面：聊天历史（只取最近的消息）
+    const recentMessages = allMsgs.slice(-30); // 最近30条
+    for (const msg of recentMessages) {
+      apiMsgs.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    }
+    
+    console.log('[Prompt] Final apiMsgs count:', apiMsgs.length);
+    console.log('[Prompt] Messages:', apiMsgs.map(m => m.role + ': ' + (m.content || '').substring(0, 20)));
+    
+    // ===== 第 2 步：调试日志 =====
+    console.log('');
+    console.log('========================================');
+    console.log('        PROMPT ASSEMBLY RESULTS        ');
+    console.log('========================================');
+    console.log('Character:', charCard?.name || 'none');
+    console.log('Description:', charCard?.description ? charCard.description.substring(0, 50) + '...' : '(empty)');
+    console.log('Personality:', charCard?.personality || '(empty)');
+    console.log('Scenario:', charCard?.scenario || '(empty)');
+    console.log('SystemPrompt (from card):', charCard?.system_prompt ? 'exists (' + charCard.system_prompt.length + ' chars)' : '(empty)');
+    console.log('MesExample:', charCard?.mes_example ? 'exists (' + charCard.mes_example.length + ' chars)' : '(empty)');
+    console.log('FirstMes:', charCard?.first_mes ? 'exists (' + charCard.first_mes.length + ' chars)' : '(empty)');
+    console.log('Worldbook entries:', allLoreEntries.length);
+    console.log('Final system prompt:', systemPrompt.length, 'chars');
+    console.log('System prompt preview:', systemPrompt.substring(0, 500));
+    console.log('apiMsgs count:', apiMsgs.length);
+    console.log('First msg role:', apiMsgs[0]?.role);
+    console.log('========================================');
+    console.log('');
+    // ===== 调试日志结束 =====
     
     setLoading(true); setStream(''); streamRef.current = '';
     
