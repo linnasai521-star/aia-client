@@ -346,19 +346,3 @@ export async function getApiConfigModels(id) {
   const cfg = await getApiConfig(id);
   return cfg?.models || [];
 }
-
-/** 更新聊天会话 */
-export async function updateChat(chatId, updates) {
-  const chat = await getChat(chatId);
-  if (!chat) return;
-  Object.assign(chat, updates, { updatedAt: Date.now() });
-  return r2p((await store('chats', 'readwrite')).put(chat));
-}
-
-/** 获取某个聊天会话的消息（按时间排序） */
-export async function getMessagesByChat(chatId) {
-  const s = await store('messages');
-  const idx = s.index('chatId');
-  const all = await r2p(idx.getAll(IDBKeyRange.only(chatId)));
-  return all.sort((a, b) => a.ts - b.ts);
-}
