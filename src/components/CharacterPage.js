@@ -117,13 +117,13 @@ export function CharacterPage() {
     }, version);
   };
   
-   if (!c) {
+  if (!c) {
     return h(React.Fragment, null,
       h('header', { className: 'header' },
         h('button', { className: 'btn-icon menu-btn', onClick: () => ctx.setSidebar(true) }, '☰'),
         h('span', { className: 'header-title' }, '🎭 角色卡')
       ),
-      h('div', { className: 'empty-state char-card' },
+      h('div', { className: 'empty-state' },
         h('div', { className: 'icon' }, '🎭'),
         h('h3', null, '未导入角色卡'),
         h('p', null, '导入 SillyTavern 格式的角色卡'),
@@ -138,7 +138,7 @@ export function CharacterPage() {
               style: { display: 'none' }
             }),
             h('button', {
-              className: 'empty-btn',
+              className: 'btn btn-primary',
               onClick: () => fileInputRef.current?.click(),
               disabled: importing
             }, importing ? '导入中...' : '📁 导入角色卡 (JSON/PNG)')
@@ -154,7 +154,7 @@ export function CharacterPage() {
               style: { display: 'none' }
             }),
             h('button', {
-              className: 'empty-btn',
+              className: 'btn btn-ghost',
               onClick: () => pngInputRef.current?.click(),
               disabled: importing
             }, '🖼️ 导入 PNG 角色卡')
@@ -170,7 +170,7 @@ export function CharacterPage() {
               style: { display: 'none' }
             }),
             h('button', {
-              className: 'empty-btn',
+              className: 'btn btn-ghost',
               onClick: () => lorebookInputRef.current?.click(),
               disabled: importing
             }, '📚 导入世界书')
@@ -195,95 +195,83 @@ export function CharacterPage() {
     ['后续指令', c.post_history_instructions],
   ].filter(([_, v]) => v && v.trim());
   
-  // 预览文本取第一项
-  const previewField = fields.length > 0 ? fields[0] : null;
-  
   return h(React.Fragment, null,
     h('header', { className: 'header' },
       h('button', { className: 'btn-icon menu-btn', onClick: () => ctx.setSidebar(true) }, '☰'),
       h('span', { className: 'header-title' }, '🎭 角色卡')
     ),
-    h('div', { className: 'cc-panel char-card' },
-      // 卡片头部：头像 + 名称 + 标签
-      h('div', { className: 'char-card-header' },
+    h('div', { className: 'cc-panel' },
+      // 角色头像和名称
+      h('div', { className: 'card-header' },
         c.avatar ? 
           h('img', { 
             src: c.avatar, 
             alt: c.name,
-            className: 'char-card-avatar',
+            style: { 
+              width: 80, 
+              height: 80, 
+              borderRadius: 20, 
+              objectFit: 'cover',
+              border: '3px solid var(--accent)'
+            },
             onError: (e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'flex';
             }
-          }) : h('div', { 
-            className: 'char-card-avatar',
-            style: { display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(167,139,250,0.15)', fontSize: '24px', color: '#a78bfa' }
-          }, c.name?.[0] || '?'),
-        h('div', { className: 'char-card-info' },
-          h('div', { className: 'char-card-name' }, c.name),
-          c.creator ? h('div', { style: { fontSize: '12px', color: 'var(--text-sub)', marginBottom: '4px' } }, 'by ' + c.creator) : null,
-          c.tags?.length ? h('div', { className: 'char-card-tags' },
-            c.tags.map((t, i) => h('span', { key: i, className: 'char-tag' }, t))
+          }) : null,
+        h('div', { 
+          className: 'card-avatar',
+          style: c.avatar ? { display: 'none' } : { width: 80, height: 80 }
+        }, c.name?.[0] || '?'),
+        h('div', { style: { marginLeft: '16px' } },
+          h('div', { className: 'card-name', style: { fontSize: '1.25rem' } }, c.name),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' } },
+            c.creator ? h('span', { style: { fontSize: '0.875rem', color: 'var(--text3)' } }, 'by ' + c.creator) : null,
+            renderVersionBadge()
+          ),
+          c.tags?.length ? h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' } },
+            c.tags.map((t, i) => h('span', { key: i, className: 'tag tag-blue' }, t))
           ) : null
         )
       ),
       
-      // 预览描述
-      previewField ? h('div', { className: 'char-card-preview' }, previewField[1]) : 
-        h('div', { className: 'char-card-preview', style: { color: '#b0a4c8', fontStyle: 'italic' } }, '暂无描述'),
-      
-      // 底部信息
-      h('div', { className: 'char-card-footer' },
-        h('span', { className: 'char-card-time' }, 
-          c.create_time ? '🕐 ' + new Date(c.create_time).toLocaleDateString() : '🕐 最近使用'
-        ),
-        h('span', { className: 'char-card-fav' }, '❤️')
-      ),
-      
-      // 详细信息（可折叠/展开）
-      fields.length > 1 ?
-        h('details', { style: { marginTop: '12px', borderTop: '1px solid rgba(200,180,220,0.1)', paddingTop: '12px' } },
-          h('summary', { style: { cursor: 'pointer', fontSize: '14px', color: '#a78bfa', fontWeight: 500 } }, '📋 查看完整角色信息'),
-          h('div', { style: { marginTop: '12px' } },
-            fields.slice(1).map(([label, value]) =>
-              h('div', { key: label, style: {
-                marginBottom: '12px',
-                background: 'rgba(255,255,255,0.4)',
-                borderRadius: '12px',
-                padding: '12px'
-              }},
-                h('label', { style: { fontSize: '12px', color: '#a78bfa', fontWeight: 600, display: 'block', marginBottom: '4px' } }, label),
-                h('div', { style: { 
-                  whiteSpace: 'pre-wrap',
-                  maxHeight: label === '系统提示' ? '200px' : 'none',
-                  overflow: label === '系统提示' ? 'auto' : 'visible',
-                  fontSize: '13px',
-                  lineHeight: '1.6',
-                  color: '#5b4a7a'
-                }}, value)
-              )
-            )
+      // 详细信息
+      fields.length > 0 ? 
+        fields.map(([label, value]) =>
+          h('div', { key: label, className: 'cc-field' },
+            h('label', null, label),
+            h('div', { 
+              className: 'value',
+              style: { 
+                whiteSpace: 'pre-wrap',
+                maxHeight: label === '系统提示' ? '300px' : 'none',
+                overflow: label === '系统提示' ? 'auto' : 'visible',
+                fontSize: '0.9rem',
+                lineHeight: '1.6'
+              }
+            }, value)
           )
-        ) : null,
+        ) :
+        h('div', { style: { textAlign: 'center', color: 'var(--text3)', padding: 20 } }, '暂无详细信息'),
       
       // 操作按钮
-      h('div', { style: { marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' } },
+      h('div', { style: { marginTop: 24, display: 'flex', gap: 8, flexWrap: 'wrap' } },
         h('button', {
-          className: 'empty-btn',
+          className: 'btn btn-ghost',
           onClick: handleCopySystemPrompt,
-          style: { flex: 1, fontSize: '13px', padding: '10px 12px', border: 'none' }
+          style: { flex: 1 }
         }, '📋 复制系统提示'),
         
         h('button', {
-          className: 'empty-btn',
+          className: 'btn btn-ghost',
           onClick: () => fileInputRef.current?.click(),
-          style: { flex: 1, fontSize: '13px', padding: '10px 12px', border: 'none' }
+          style: { flex: 1 }
         }, '🔄 重新导入'),
         
         h('button', {
-          className: 'empty-btn',
+          className: 'btn btn-danger',
           onClick: handleDeleteCharacter,
-          style: { flex: 1, fontSize: '13px', padding: '10px 12px', border: 'none', color: '#e85d75' }
+          style: { flex: 1 }
         }, '🗑️ 删除角色')
       ),
       
@@ -297,25 +285,26 @@ export function CharacterPage() {
       }),
       
       // 世界书导入
-      h('div', { style: { marginTop: '16px', borderTop: '1px solid rgba(200,180,220,0.1)', paddingTop: '16px' } },
+      h('div', { style: { marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px' } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' } },
-          h('h4', { style: { margin: 0, color: '#3a2a5a', fontSize: '15px' } }, '📚 世界书'),
+          h('h4', { style: { margin: 0 } }, '📚 世界书'),
           h('button', {
-            className: 'empty-btn',
+            className: 'btn btn-ghost btn-sm',
             onClick: () => lorebookInputRef.current?.click(),
-            disabled: importing,
-            style: { padding: '6px 14px', fontSize: '12px', border: 'none' }
-          }, '➕ 导入')
+            disabled: importing
+          }, '➕ 导入世界书')
         ),
         
+        // 显示世界书条目数量
         ctx.wb && ctx.wb.length > 0 ? 
-          h('div', { style: { fontSize: '13px', color: '#6b5b8a' } },
+          h('div', { style: { fontSize: '0.875rem', color: 'var(--text-muted)' } },
             `已加载 ${ctx.wb.length} 个世界书条目`
           ) :
-          h('div', { style: { fontSize: '13px', color: '#b0a4c8', fontStyle: 'italic' } },
+          h('div', { style: { fontSize: '0.875rem', color: 'var(--text-muted)', fontStyle: 'italic' } },
             '暂无世界书条目'
           ),
         
+        // 世界书导入输入
         h('input', {
           ref: lorebookInputRef,
           type: 'file',
@@ -327,37 +316,38 @@ export function CharacterPage() {
       
       // 交替问候语
       c.alternate_greetings && c.alternate_greetings.length > 0 ?
-        h('details', { style: { marginTop: '16px', borderTop: '1px solid rgba(200,180,220,0.1)', paddingTop: '12px' } },
-          h('summary', { style: { cursor: 'pointer', fontSize: '14px', color: '#a78bfa', fontWeight: 500 } }, '💬 交替问候语'),
-          h('div', { style: { marginTop: '8px' } },
-            c.alternate_greetings.map((greeting, index) =>
-              h('div', { key: index, style: {
+        h('div', { style: { marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px' } },
+          h('h4', { style: { marginBottom: '12px' } }, '💬 交替问候语'),
+          c.alternate_greetings.map((greeting, index) =>
+            h('div', {
+              key: index,
+              style: {
                 padding: '12px',
-                background: 'rgba(255,255,255,0.4)',
-                borderRadius: '12px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
                 marginBottom: '8px',
                 whiteSpace: 'pre-wrap',
-                fontSize: '13px',
-                lineHeight: '1.6',
-                color: '#5b4a7a'
-              }}, greeting)
-            )
+                fontSize: '0.9rem',
+                lineHeight: '1.6'
+              }
+            }, greeting)
           )
         ) : null,
       
       // 扩展信息
       c.extensions && Object.keys(c.extensions).length > 0 ?
-        h('details', { style: { marginTop: '16px', borderTop: '1px solid rgba(200,180,220,0.1)', paddingTop: '12px' } },
-          h('summary', { style: { cursor: 'pointer', fontSize: '14px', color: '#a78bfa', fontWeight: 500 } }, '🔧 扩展信息'),
-          h('pre', { style: {
-            background: 'rgba(255,255,255,0.4)',
-            padding: '12px',
-            borderRadius: '12px',
-            fontSize: '12px',
-            overflow: 'auto',
-            maxHeight: '160px',
-            color: '#6b5b8a'
-          }}, JSON.stringify(c.extensions, null, 2))
+        h('div', { style: { marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px' } },
+          h('h4', { style: { marginBottom: '12px' } }, '🔧 扩展信息'),
+          h('pre', {
+            style: {
+              background: 'var(--bg-secondary)',
+              padding: '12px',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
+              overflow: 'auto',
+              maxHeight: '200px'
+            }
+          }, JSON.stringify(c.extensions, null, 2))
         ) : null,
       
       // 进度显示
@@ -368,13 +358,12 @@ export function CharacterPage() {
             bottom: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(255,255,255,0.9)',
-            backdropFilter: 'blur(16px)',
+            background: 'var(--bg-primary)',
             padding: '12px 24px',
-            borderRadius: '16px',
-            boxShadow: '0 4px 20px rgba(170,130,220,0.15)',
+            borderRadius: '8px',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 1000,
-            color: '#3a2a5a'
+            color: 'var(--text-primary)'
           }
         }, importProgress) : null
     )
