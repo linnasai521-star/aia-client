@@ -196,9 +196,22 @@ function App() {
     try {
       let characterData = null;
       let avatar = null;
-      
       if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
-        avatar = URL.createObjectURL(file);
+        // 将 PNG 文件转为 base64（永久存储，刷新后不会丢失）
+        try {
+          avatar = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              resolve(e.target.result); // data:image/png;base64,xxxxx
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          console.log('[Import] Avatar saved as base64, length:', avatar.length);
+        } catch(err) {
+          console.warn('[Import] Avatar read failed:', err);
+          avatar = null;
+        }
         characterData = await parsePngCharacterCard(file);
         console.log('[Import] PNG parsed:', { name: characterData.name, hasPersonality: !!characterData.personality, hasFirstMes: !!characterData.first_mes, hasScenario: !!characterData.scenario, hasWorldbook: !!(characterData.worldbook?.length), tags: characterData.tags });
       } else if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
