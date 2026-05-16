@@ -36,7 +36,6 @@ export function ImmersiveChatPage() {
     setIsTyping(true); setTimeout(() => setIsTyping(false), 2000);
   };
   const handleKeyDown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
-  const handleQuickAction = a => { setInputValue(a); if (textareaRef.current) textareaRef.current.focus(); };
 
   const cn = ctx.charCard ? ctx.charCard.name : '她';
   const ca = ctx.charCard?.avatar;
@@ -81,10 +80,8 @@ export function ImmersiveChatPage() {
     return h('div', { className: 'empty-chat' },
       h('div', { className: 'character-presence' },
         h('div', { className: 'char-time-indicator' }, now()),
-        h('div', { className: 'char-avatar-large' },
-          h('div', { className: 'avatar-inner' },
-            ca ? h('img', { src: ca, alt: cn, style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } }) : (cn[0] || '✨')
-          )
+        h('div', { className: 'char-avatar-large', style: { border: 'none', boxShadow: 'none' } },
+          ca ? h('img', { src: ca, alt: cn, style: { width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' } }) : h('span', { style: { fontSize: '2rem' } }, cn[0] || '✨')
         ),
         h('div', { className: 'char-name-display', style: { marginTop: '12px', fontSize: '1.5rem' } },
           hasCharacter ? cn : '等待中...'
@@ -105,28 +102,8 @@ export function ImmersiveChatPage() {
               h('div', { className: 'char-environment' }, env)
             )
         ),
-        h('div', { className: 'chat-header-meta', style: { justifyContent: 'center', marginTop: '8px' } },
-          h('span', { className: 'last-interaction' }, '🕐 最近：刚刚')
-        ),
-        h('div', { className: 'stats-row' },
-          h('div', { className: 'stat-item' },
-            h('div', { style: { fontSize: '16px', fontWeight: '600', color: '#a78bfa' } }, '1'),
-            h('div', { style: { fontSize: '11px', color: '#b0a4c8' } }, '对话')
-          ),
-          h('div', { className: 'stat-item' },
-            h('div', { style: { fontSize: '16px', fontWeight: '600', color: '#a78bfa' } }, '今天'),
-            h('div', { style: { fontSize: '11px', color: '#b0a4c8' } }, '陪伴')
-          ),
-          h('div', { className: 'stat-item' },
-            h('div', { style: { fontSize: '16px', fontWeight: '600', color: '#a78bfa' } }, '❤️'),
-            h('div', { style: { fontSize: '11px', color: '#b0a4c8' } }, '亲密度')
-          )
-        ),
-        h('div', { className: 'quick-actions' },
-          h('button', { className: 'quick-action-btn', onClick: () => handleQuickAction('你好') }, '👋 打招呼'),
-          h('button', { className: 'quick-action-btn', onClick: () => handleQuickAction('今天过得怎么样？') }, '🌤️ 问候'),
-          h('button', { className: 'quick-action-btn', onClick: () => handleQuickAction('给我讲个故事') }, '📖 听故事')
-        )
+
+
       )
     );
   };
