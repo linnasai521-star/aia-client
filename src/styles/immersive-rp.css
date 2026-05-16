@@ -1,21 +1,53 @@
-/* ===== 强制横排文字修复 ===== */
-* {
-  writing-mode: horizontal-tb !important;
-  text-orientation: mixed !important;
+/* ===== 紧急修复：消息文字网格/多列布局修复 ===== */
+
+/* 强制消息容器为普通块级布局 */
+.msg-ai-bubble, .msg-user-bubble, [class*="bubble"], [class*="content"] {
+  display: block !important;
+  grid: none !important;
+  grid-template: none !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-area: unset !important;
+  grid-auto-columns: unset !important;
+  grid-auto-flow: unset !important;
   columns: unset !important;
   column-count: unset !important;
   column-width: unset !important;
-}
-
-.msg-ai-bubble, .msg-user-bubble, [class*="bubble"] {
+  column-fill: unset !important;
+  column-gap: unset !important;
   writing-mode: horizontal-tb !important;
   text-orientation: mixed !important;
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
 }
 
+/* 强制消息区域为普通文档流 */
+.messages-area, .messages-container, [class*="messages"], [class*="chat-scroll"], [class*="message-list"] {
+  display: flex !important;
+  flex-direction: column !important;
+  grid: none !important;
+  grid-template: none !important;
+  grid-template-columns: none !important;
+  columns: unset !important;
+  column-count: unset !important;
+  column-width: unset !important;
+  writing-mode: horizontal-tb !important;
+}
+
+/* 全局搜索：确保任何带 content 的元素不用列布局 */
+[class*="message-content"], [class*="msg-content"], [class*="bubble-content"] {
+  display: block !important;
+  columns: unset !important;
+  column-count: unset !important;
+  column-width: unset !important;
+  writing-mode: horizontal-tb !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+/* 强制聊天页容器为纵向弹性盒 */
 chat-page, [class*="chat"] {
   writing-mode: horizontal-tb !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 /* === LEGACY GLOBAL STYLES — 禁止新增, 将逐步废弃 === */
