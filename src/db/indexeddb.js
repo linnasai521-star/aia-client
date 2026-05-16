@@ -1,5 +1,5 @@
 const DB_NAME = 'aia-v4';
-const DB_VER = 3;
+const DB_VER = 2;
 let _db = null;
 
 function open() {
@@ -8,8 +8,6 @@ function open() {
     const req = indexedDB.open(DB_NAME, DB_VER);
     req.onupgradeneeded = e => {
       const d = e.target.result;
-
-      // v1 → v2 基础表（首次创建场景）
       if (!d.objectStoreNames.contains('conversations')) {
         const s = d.createObjectStore('conversations', { keyPath: 'id' });
         s.createIndex('updatedAt', 'updatedAt');
@@ -25,18 +23,18 @@ function open() {
         s.createIndex('convId', 'convId');
       }
       if (!d.objectStoreNames.contains('characters')) d.createObjectStore('characters', { keyPath: 'id' });
+      // NEW: API configs store
       if (!d.objectStoreNames.contains('apiConfigs')) {
         d.createObjectStore('apiConfigs', { keyPath: 'id' });
       }
-
-      // v1 → v2 迁移：settings → apiConfigs
+      // Migrate old settings to apiConfig if exists
       if (e.oldVersion < 2 && d.objectStoreNames.contains('settings')) {
         const tx = e.target.transaction;
         const settingStore = tx.objectStore('settings');
         const apiStore = tx.objectStore('apiConfigs');
-        const sreq = settingStore.getAll();
-        sreq.onsuccess = () => {
-          const all = sreq.result;
+        const req = settingStore.getAll();
+        req.onsuccess = () => {
+          const all = req.result;
           const s = {};
           for (const i of all) s[i.key] = i.value;
           if (s.apiUrl || s.apiKey) {
@@ -56,85 +54,6 @@ function open() {
           }
         };
       }
-
-      // ===== v2 → v3 升级：角色-会话双层架构 =====
-      if (e.oldVersion < 3) {
-        const tx = e.target.transaction;
-
-        // 1. 新增 chats 表
-        if (!d.objectStoreNames.contains('chats')) {
-          const chatStore = d.createObjectStore('chats', { keyPath: 'chatId' });
-          chatStore.createIndex('characterId', 'characterId');
-          chatStore.createIndex('updatedAt', 'updatedAt');
-        }
-
-        // 2. messages 添加 chatId 索引（如果不存在）
-        if (d.objectStoreNames.contains('messages')) {
-          const msgStore = tx.objectStore('messages');
-          if (!msgStore.indexNames.contains('chatId')) {
-            msgStore.createIndex('chatId', 'chatId');
-          }
-        }
-
-        // 3. 为已有角色创建默认 chat，并迁移消息
-        if (d.objectStoreNames.contains('conversations') && d.objectStoreNames.contains('characters')) {
-          const convStore = tx.objectStore('conversations');
-          const charStore = tx.objectStore('characters');
-          const chatStore = tx.objectStore('chats');
-
-          // 先获取所有对话
-          convStore.getAll().onsuccess = (ev) => {
-            const convs = ev.target.result || [];
-            // 再获取所有角色
-            charStore.getAll().onsuccess = (ev2) => {
-              const chars = ev2.target.result || [];
-
-              // 为每个角色创建默认 chat
-              for (const ch of chars) {
-                if (!ch.defaultChatId) {
-                  const chatId = 'chat-' + ch.id;
-                  ch.defaultChatId = chatId;
-                  charStore.put(ch);
-
-                  chatStore.put({
-                    chatId,
-                    characterId: ch.id,
-                    title: '默认聊天',
-                    createdAt: ch.createdAt || Date.now(),
-                    updatedAt: Date.now(),
-                    lastMessageAt: null,
-                    isActive: true,
-                    summary: ''
-                  });
-                }
-              }
-
-              // 为已有对话的消息关联 chatId
-              const msgStore = tx.objectStore('messages');
-              if (msgStore && msgStore.indexNames.contains('convId')) {
-                for (const cv of convs) {
-                  if (cv.characterId) {
-                    const chatId = 'chat-' + cv.characterId;
-                    const msgIdx = msgStore.index('convId');
-                    const r = msgIdx.openCursor(IDBKeyRange.only(cv.id));
-                    r.onsuccess = (ev3) => {
-                      const cursor = ev3.target.result;
-                      if (cursor) {
-                        const m = cursor.value;
-                        if (!m.chatId) {
-                          m.chatId = chatId;
-                          cursor.update(m);
-                        }
-                        cursor.continue();
-                      }
-                    };
-                  }
-                }
-              }
-            };
-          };
-        }
-      }
     };
     req.onsuccess = e => { _db = e.target.result; resolve(_db); };
     req.onerror = e => reject(e.target.error);
@@ -153,7 +72,7 @@ function r2p(req) {
   });
 }
 
-// ==================== Conversations（保留向后兼容） ====================
+// Conversations
 export async function getAllConversations() {
   const s = await store('conversations');
   const all = await r2p(s.getAll());
@@ -166,7 +85,7 @@ export async function deleteConversation(id) {
   await deleteByIndex('messages', 'convId', id);
 }
 
-// ==================== Messages ====================
+// Messages
 export async function getMessages(convId, limit = 200) {
   const s = await store('messages');
   const idx = s.index('convTs');
@@ -188,7 +107,7 @@ export async function getAllMessages(convId) {
 }
 export async function putMessage(m) { return r2p((await store('messages', 'readwrite')).put(m)); }
 
-// ==================== Settings ====================
+// Settings
 export async function getAllSettings() {
   const all = await r2p((await store('settings')).getAll());
   const obj = {};
@@ -199,7 +118,7 @@ export async function setSetting(key, value) {
   return r2p((await store('settings', 'readwrite')).put({ key, value }));
 }
 
-// ==================== API Configs ====================
+// 👇 NEW: API Configs CRUD
 export async function getAllApiConfigs() {
   return r2p((await store('apiConfigs')).getAll());
 }
@@ -227,102 +146,19 @@ export async function getDefaultApiConfig() {
   return all.find(c => c.isDefault) || all[0] || null;
 }
 
-// ==================== World book ====================
+// World book
 export async function getWorldBook(convId = '_global') {
   return r2p((await store('worldbook')).index('convId').getAll(IDBKeyRange.only(convId)));
 }
 export async function putWorldBookEntry(e) { return r2p((await store('worldbook', 'readwrite')).put(e)); }
 export async function deleteWorldBookEntry(id) { return r2p((await store('worldbook', 'readwrite')).delete(id)); }
 
-// ==================== Characters ====================
+// Characters
 export async function getAllCharacters() { return r2p((await store('characters')).getAll()); }
-export async function getCharacter(id) { return r2p((await store('characters')).get(id)); }
 export async function putCharacter(c) { return r2p((await store('characters', 'readwrite')).put(c)); }
 export async function deleteCharacter(id) { return r2p((await store('characters', 'readwrite')).delete(id)); }
 
-// ==================== Chats（新：角色-会话双层架构） ====================
-/** 获取某个角色的所有聊天会话 */
-export async function getChatsByCharacter(characterId) {
-  return r2p((await store('chats')).index('characterId').getAll(IDBKeyRange.only(characterId)));
-}
-
-/** 获取单个聊天会话 */
-export async function getChat(chatId) {
-  return r2p((await store('chats')).get(chatId));
-}
-
-/** 保存聊天会话 */
-export async function putChat(chat) {
-  chat.updatedAt = Date.now();
-  return r2p((await store('chats', 'readwrite')).put(chat));
-}
-
-/** 删除聊天会话及其消息 */
-export async function deleteChat(chatId) {
-  await r2p((await store('chats', 'readwrite')).delete(chatId));
-  await deleteByIndex('messages', 'chatId', chatId);
-}
-
-/** 更新聊天会话 */
-export async function updateChat(chatId, updates) {
-  const chat = await getChat(chatId);
-  if (!chat) return;
-  Object.assign(chat, updates, { updatedAt: Date.now() });
-  return r2p((await store('chats', 'readwrite')).put(chat));
-}
-
-/** 获取某个聊天会话的消息（按 chatId） */
-export async function getMessagesByChatId(chatId, limit = 200) {
-  const s = await store('messages');
-  if (!s.indexNames.contains('chatId')) return [];
-  return new Promise((resolve) => {
-    const results = [];
-    const req = s.index('chatId').openCursor(IDBKeyRange.only(chatId), 'prev');
-    req.onsuccess = e => {
-      const c = e.target.result;
-      if (!c || results.length >= limit) { resolve(results.reverse()); return; }
-      results.push(c.value);
-      c.continue();
-    };
-    req.onerror = () => resolve([]);
-  });
-}
-
-/** 获取角色的默认聊天（没有则创建） */
-export async function getOrCreateDefaultChat(characterId) {
-  const char = await getCharacter(characterId);
-  if (char?.defaultChatId) {
-    const chat = await getChat(char.defaultChatId);
-    if (chat) return chat;
-  }
-  // 创建默认聊天
-  const chatId = 'chat-' + characterId;
-  const chat = {
-    chatId,
-    characterId,
-    title: char?.name ? `与${char.name}的聊天` : '默认聊天',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    lastMessageAt: null,
-    isActive: true,
-    summary: ''
-  };
-  await putChat(chat);
-  // 更新角色的 defaultChatId
-  if (char) {
-    char.defaultChatId = chatId;
-    await putCharacter(char);
-  }
-  return chat;
-}
-
-/** 获取所有聊天会话（全局） */
-export async function getAllChats() {
-  const all = await r2p((await store('chats')).getAll());
-  return all.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-}
-
-// ==================== Helpers ====================
+// Helpers
 async function deleteByIndex(storeName, idxName, val) {
   const s = await store(storeName, 'readwrite');
   return new Promise(resolve => {
@@ -333,6 +169,7 @@ async function deleteByIndex(storeName, idxName, val) {
     };
   });
 }
+
 
 // API Config status helpers
 export async function updateApiConfigStatus(id, updates) {
