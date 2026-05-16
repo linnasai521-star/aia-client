@@ -3,61 +3,63 @@
 */
 
 :root {
-  /* 色彩系统 - 深夜陪伴感 */
-  --bg-primary: #0f1115;
-  --bg-secondary: #151922;
-  --bg-tertiary: #1c2230;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-card-hover: rgba(255, 255, 255, 0.06);
-  --bg-input: rgba(255, 255, 255, 0.03);
+  /* 色彩系统 - 浅色主题 */
+  --bg-primary: #f8f4ff;
+  --bg-secondary: #fff0f5;
+  --bg-tertiary: #fdfbff;
+  --bg-card: rgba(255,255,255,0.65);
+  --bg-card-hover: rgba(255,255,255,0.85);
+  --bg-input: rgba(255,255,255,0.65);
   
-  /* 文字颜色 - 柔和阅读感 */
-  --text-primary: #e8e6e3;
-  --text-secondary: #a8a29e;
-  --text-muted: #6b6560;
-  --text-accent: #c8a2ff;
+  /* 文字颜色 */
+  --text-primary: #2d1b4e;
+  --text-secondary: #6b5b8a;
+  --text-muted: #9b8fb4;
+  --text-hint: #b0a4c8;
+  --text-accent: #a78bfa;
   
-  /* 高亮色 - 柔和紫调 */
-  --accent-primary: #8b93ff;
-  --accent-secondary: #b799ff;
-  --accent-glow: rgba(139, 147, 255, 0.25);
+  /* 高亮色 - 粉紫渐变 */
+  --accent-primary: #a78bfa;
+  --accent-secondary: #f6b7d2;
+  --accent-gradient: linear-gradient(135deg, #f6b7d2, #a78bfa);
+  --accent-glow: rgba(167,139,250,0.25);
   
   /* 氛围色 */
-  --glow-warm: rgba(255, 200, 150, 0.08);
-  --glow-cool: rgba(139, 147, 255, 0.08);
+  --glow-warm: rgba(255,200,150,0.12);
+  --glow-cool: rgba(167,139,250,0.12);
   
   /* 毛玻璃 */
-  --glass-bg: rgba(15, 17, 21, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-blur: 24px;
+  --glass-bg: rgba(252,249,255,0.92);
+  --glass-border: rgba(230,218,255,0.35);
+  --glass-blur: 28px;
   
   /* 字体 */
-  --font-sans: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-serif: 'Noto Serif SC', Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   
-  /* 圆角 - 柔和大圆角 */
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
+  /* 圆角 */
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
   --radius-xl: 32px;
   --radius-full: 9999px;
   
-  /* 间距 - 更多留白 */
+  /* 间距 */
   --space-xs: 6px;
   --space-sm: 12px;
-  --space-md: 20px;
-  --space-lg: 32px;
-  --space-xl: 48px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
   --space-2xl: 64px;
   
-  /* 动画 - 柔和呼吸感 */
+  /* 动画 */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --duration-fast: 200ms;
   --duration-normal: 350ms;
   --duration-slow: 500ms;
-  --accent-tertiary: #4a4e69;
+  --accent-tertiary: #c4b8d8;
   --mood-happy: #ffd6a5;
   --mood-sad: #a0c4ff;
   --mood-angry: #ffadad;
@@ -87,7 +89,7 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background: var(--bg-primary);
+  background: var(--bg-primary); color: var(--text-primary);
   color: var(--text-primary);
   line-height: 1.7;
   letter-spacing: 0.02em;
@@ -133,7 +135,7 @@ body {
   display: flex;
   position: relative;
   overflow: hidden;
-  background: var(--bg-primary);
+  background: var(--bg-primary); color: var(--text-primary);
   transition: background var(--duration-slow) var(--ease-smooth);
 }
 
