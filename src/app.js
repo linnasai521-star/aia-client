@@ -334,7 +334,7 @@ function App() {
 
   // 发送消息
   const sendMsg = useCallback(async (content) => {
-    if (!content.trim() || loading || !curId) return;
+    if (!content.trim() || loading || (!curId && !currentChatId)) return;
     
     const userMsg = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'user', content, ts: Date.now() };
     await db.putMessage(userMsg);
@@ -551,10 +551,10 @@ function App() {
         { maxTokens: parseInt(fresh.maxTokens) || 4096, temperature: parseFloat(fresh.temperature) || 0.7, topP: parseFloat(fresh.topP) || 1 },
         ctrl.signal
       ).then(async (resp) => {
-        const am = { id: genId(), convId: curId, role: 'assistant', content: resp || '(空响应)', ts: Date.now(), chatId: selectedChat?.chatId };
+        const am = { id: genId(), convId: curId, role: 'assistant', content: resp || '(空响应)', ts: Date.now(), };
         await db.putMessage(am); setMsgs(m => [...m, am]); setLoading(false); abortRef.current = null;
       }).catch(async (err) => {
-        const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now(), chatId: selectedChat?.chatId };
+        const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now(), };
         await db.putMessage(em); setMsgs(m => [...m, em]); setLoading(false); abortRef.current = null;
       });
     }
