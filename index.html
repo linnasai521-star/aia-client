@@ -1,54 +1,291 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta name="color-scheme" content="light">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0f1115">
+<meta name="theme-color" content="#f8f4ff">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="src/styles/design-system.css">
-<link rel="stylesheet" href="src/styles/immersive-rp.css?v=20">
 <title>Interlude</title>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
-    "marked": "https://esm.sh/marked@12.0.0",
-    "dompurify": "https://esm.sh/dompurify@3.0.8"
-  }
+<style>
+:root {
+  --bg: linear-gradient(180deg, #f3eefa 0%, #f9f2f8 50%, #faf6ff 100%);
+  --card: rgba(255,255,255,0.58);
+  --card-solid: rgba(252,249,255,0.92);
+  --glass: rgba(255,255,255,0.42);
+  --border: rgba(230,218,255,0.35);
+  --border-dark: rgba(200,180,240,0.18);
+  --txt1: #2d1b4e;
+  --txt2: #6b5b8a;
+  --txt3: #9b8fb4;
+  --txt4: #c4b8d8;
+  --pink: #f6b7d2;
+  --purple: #a78bfa;
+  --grad: linear-gradient(135deg, #f6b7d2 0%, #c4b5fd 100%);
+  --green: #34d399;
+  --shadow: 0 4px 16px rgba(190,160,255,0.10);
+  --blur: blur(28px);
+  --r1: 14px; --r2: 20px; --r3: 28px; --rf: 999px;
 }
-</script>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{width:100%;height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.5;color:var(--txt1);
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  background:var(--bg);color-scheme:light;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+.app{display:flex;flex-direction:column;height:100%;height:100dvh;overflow:hidden}
+.topbar{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;
+  padding-top:calc(12px + env(safe-area-inset-top,12px));
+  background:var(--card-solid);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--border-dark);
+  z-index:10;
+}
+.topbar-title{font-size:20px;font-weight:700;color:var(--txt1);letter-spacing:0.3px}
+.topbar-actions{display:flex;gap:10px}
+.topbar-btn{
+  width:38px;height:38px;border-radius:var(--r1);
+  background:var(--glass);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--txt2);transition:transform 0.15s;
+}
+.topbar-btn:active{transform:scale(0.9)}
+.search-wrap{flex-shrink:0;padding:10px 20px}
+.search-box{
+  display:flex;align-items:center;gap:8px;
+  background:var(--card);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--border);border-radius:var(--rf);
+  padding:0 14px;height:40px;
+  box-shadow:var(--shadow);
+}
+.search-box .icon{font-size:15px;color:var(--txt4);flex-shrink:0}
+.search-box input{
+  flex:1;border:none;background:none;font-size:14px;color:var(--txt1);outline:none;height:100%;
+}
+.search-box input::placeholder{color:var(--txt4)}
+.list-scroll{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+}
+.list-scroll::-webkit-scrollbar{display:none}
+.list{padding:4px 0}
+.chat-row{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;
+  transition:background 0.12s;cursor:pointer;
+  border-bottom:0.5px solid var(--border-dark);
+}
+.chat-row:active{background:rgba(190,160,255,0.06)}
+.chat-row:last-child{border-bottom:none}
+.row-avatar{
+  width:54px;height:54px;border-radius:var(--r1);flex-shrink:0;
+  overflow:hidden;position:relative;
+  background:linear-gradient(135deg,#f0e6f6,#ede9fe);
+}
+.row-avatar img{width:100%;height:100%;object-fit:cover}
+.row-avatar .fb{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:600;color:var(--pink);
+}
+.dot-online{
+  position:absolute;bottom:0;right:0;width:13px;height:13px;
+  border-radius:50%;background:var(--green);
+  border:2.5px solid rgba(252,249,255,0.95);
+}
+.row-body{flex:1;min-width:0}
+.row-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.row-name{font-size:17px;font-weight:600;color:var(--txt1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-time{font-size:12px;color:var(--txt4);flex-shrink:0;margin-left:8px}
+.row-bot{display:flex;align-items:center;gap:6px}
+.row-msg{flex:1;font-size:14px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+.row-badge{
+  flex-shrink:0;min-width:20px;height:20px;padding:0 6px;
+  border-radius:var(--rf);background:var(--grad);
+  color:#fff;font-size:11px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+}
+.empty{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:100px 20px;text-align:center;
+}
+.empty-emoji{font-size:56px;margin-bottom:16px;opacity:.65}
+.empty h3{font-size:18px;font-weight:600;color:var(--txt1);margin-bottom:6px}
+.empty p{font-size:14px;color:var(--txt3)}
+.bnav{
+  flex-shrink:0;display:flex;align-items:center;justify-content:space-around;
+  height:64px;padding-bottom:env(safe-area-inset-bottom,0);
+  background:var(--card-solid);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  border-top:0.5px solid var(--border-dark);
+  box-shadow:0 -4px 20px rgba(170,140,255,0.06);
+}
+.bnav-i{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 14px;color:var(--txt3);position:relative;
+  transition:color .2s;
+}
+.bnav-ico{font-size:24px;line-height:1;transition:transform .2s}
+.bnav-lbl{font-size:10px;font-weight:500}
+.bnav-i.on{color:var(--purple)}
+.bnav-i.on .bnav-ico{transform:scale(1.08);filter:drop-shadow(0 2px 8px rgba(167,139,250,0.3))}
+.bnav-i.on::after{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:22px;height:2.5px;border-radius:2px;
+  background:var(--grad);
+}
+</style>
 </head>
 <body>
-<div class="atmosphere-layer"></div>
-<div class="light-stream"></div>
 <div id="root"></div>
-<script type="module" src="src/app.js?v=23"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => {
-        console.log('SW registered:', reg.scope);
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'activated') {
-              window.location.reload();
-            }
-          });
-        });
-      });
-  });
+<script type="importmap">{"imports":{"react":"https://esm.sh/react@18.2.0","react-dom/client":"https://esm.sh/react-dom@18.2.0/client"}}</script>
+<script type="module">
+import React,{useState,useEffect}from'react';
+import{createRoot}from'react-dom/client';
+const h=React.createElement;
+const MOCK=[
+  {id:'c1',name:'爱莉希雅',msg:'你今天怎么这么晚才来陪我？',ts:Date.now()-300000,unread:1,on:true},
+  {id:'c2',name:'克洛伊',msg:'主人今天辛苦了，喝杯热茶吧',ts:Date.now()-3600000,unread:0,on:true},
+  {id:'c3',name:'雪乃',msg:'（轻轻翻开书页）今天的风好温柔',ts:Date.now()-86400000,unread:0,on:false},
+  {id:'c4',name:'祝吟1.1',msg:'收徒大典设在辰时正。小寒山上的晨雾...',ts:Date.now()-172800000,unread:3,on:true},
+  {id:'c5',name:'无情道',msg:'她左右看了看，确认两边确实没人',ts:Date.now()-3*86400000,unread:0,on:false},
+];
+function fmt(ts){
+  if(!ts)return'';
+  const d=Date.now()-ts;
+  if(d<6e4)return'刚刚';
+  if(d<36e5)return Math.floor(d/6e4)+'分钟前';
+  if(d<864e5)return Math.floor(d/36e5)+'小时前';
+  if(d<6048e5)return['周日','周一','周二','周三','周四','周五','周六'][new Date(ts).getDay()];
+  return new Date(ts).toLocaleDateString('zh-CN');
 }
+function Home({onOpen}){
+  const[q,setQ]=useState('');
+  const list=MOCK.filter(c=>!q||c.name.includes(q)||c.msg.includes(q));
+  const totalunread=MOCK.reduce((s,c)=>s+c.unread,0);
+  return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}},
+    h('div',{className:'topbar'},
+      h('div',{className:'topbar-title'},'Interlude'),
+      h('div',{className:'topbar-actions'},
+        h('button',{className:'topbar-btn'},'🔍'),
+        h('button',{className:'topbar-btn'},'⊕')
+      )
+    ),
+    h('div',{className:'search-wrap'},
+      h('div',{className:'search-box'},
+        h('span',{className:'icon'},'🔍'),
+        h('input',{placeholder:'搜索角色或聊天...',value:q,onChange:e=>setQ(e.target.value)})
+      )
+    ),
+    h('div',{className:'list-scroll'},
+      list.length===0
+        ?h('div',{className:'empty'},
+            h('div',{className:'empty-emoji'},'💬'),
+            h('h3',,'还没有聊天'),
+            h('p',,'去角色页导入你的第一个角色吧')
+          )
+        :h('div',{className:'list'},
+            list.map(c=>
+              h('div',{key:c.id,className:'chat-row',onClick:()=>onOpen(c)},
+                h('div',{className:'row-avatar'},
+                  h('div',{className:'fb'},c.name[0]),
+                  c.on&&h('div',{className:'dot-online'})
+                ),
+                h('div',{className:'row-body'},
+                  h('div',{className:'row-top'},
+                    h('span',{className:'row-name'},c.name),
+                    h('span',{className:'row-time'},fmt(c.ts))
+                  ),
+                  h('div',{className:'row-bot'},
+                    h('span',{className:'row-msg'},c.msg),
+                    c.unread>0&&h('span',{className:'row-badge'},c.unread)
+                  )
+                )
+              )
+            )
+          )
+    )
+  );
+}
+function Chars(){
+  return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}},
+    h('div',{className:'topbar'},
+      h('div',{className:'topbar-title'},'角色'),
+      h('button',{className:'topbar-btn'},'⊕')
+    ),
+    h('div',{className:'list-scroll'},
+      MOCK.map(c=>
+        h('div',{key:c.id,className:'chat-row'},
+          h('div',{className:'row-avatar'},
+            h('div',{className:'fb'},c.name[0]),
+            c.on&&h('div',{className:'dot-online'})
+          ),
+          h('div',{className:'row-body'},
+            h('div',{className:'row-top'},
+              h('span',{className:'row-name'},c.name)
+            ),
+            h('div',{className:'row-bot'},
+              h('span',{className:'row-msg'},'点击管理角色卡')
+            )
+          )
+        )
+      )
+    )
+  );
+}
+function Mem(){
+  return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}},
+    h('div',{className:'topbar'},h('div',{className:'topbar-title'},'记忆')),
+    h('div',{className:'empty'},
+      h('div',{className:'empty-emoji'},'🧠'),
+      h('h3',,'记忆功能'),
+      h('p',,'开发中')
+    )
+  );
+}
+function Set(){
+  return h('div',{style:{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}},
+    h('div',{className:'topbar'},h('div',{className:'topbar-title'},'设置')),
+    h('div',{className:'list-scroll'},
+      ['API 配置','模型选择','数据导入导出','关于 Interlude'].map((t,i)=>
+        h('div',{key:i,className:'chat-row'},
+          h('div',{className:'row-body'},
+            h('div',{className:'row-top'},h('span',{className:'row-name'},t)),
+            h('div',{className:'row-bot'},h('span',{className:'row-msg'},'点击进入 →'))
+          )
+        )
+      )
+    )
+  );
+}
+function App(){
+  const[tab,setTab]=useState('home');
+  const tabs=[
+    {id:'home',icon:'💬',label:'聊天'},
+    {id:'char',icon:'🎭',label:'角色'},
+    {id:'mem',icon:'🧠',label:'记忆'},
+    {id:'set',icon:'⚙️',label:'设置'},
+  ];
+  const openChat=c=>alert('进入聊天：'+c.name);
+  return h('div',{className:'app'},
+    tab==='home'&&h(Home,{onOpen:openChat}),
+    tab==='char'&&h(Chars),
+    tab==='mem'&&h(Mem),
+    tab==='set'&&h(Set),
+    h('nav',{className:'bnav'},
+      tabs.map(t=>
+        h('button',{key:t.id,className:'bnav-i'+(tab===t.id?' on':''),onClick:()=>setTab(t.id)},
+          h('span',{className:'bnav-ico'},t.icon),
+          h('span',{className:'bnav-lbl'},t.label)
+        )
+      )
+    )
+  );
+}
+createRoot(document.getElementById('root')).render(h(App));
 </script>
 </body>
 </html>
