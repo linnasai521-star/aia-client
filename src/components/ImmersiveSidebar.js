@@ -107,7 +107,7 @@ export function ImmersiveSidebar() {
       h('div', { className: 'sidebar-header' },
         h('div', { className: 'sidebar-title' },
           h('span', { className: 'icon' }, '⚡'),
-          h('span', null, 'AI Aggregator')
+          h('span', null, 'Interlude')
         ),
         h('button', { className: 'new-chat-btn', onClick: ctx.createConv }, '+ 新建对话')
       ),
