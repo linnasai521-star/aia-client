@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f8f4ff">
+<title>Interlude</title>
+<style>
+:root {
+  --bg-primary: #f8f4ff;
+  --bg-secondary: #fff0f5;
+  --bg-gradient: linear-gradient(180deg, #f8f4ff 0%, #fff0f5 45%, #fdfbff 100%);
+  --card-bg: rgba(255,255,255,0.65);
+  --glass-bg: rgba(255,255,255,0.55);
+  --text-primary: #2d1b4e;
+  --text-secondary: #6b5b8a;
+  --text-muted: #9b8fb4;
+  --text-hint: #b0a4c8;
+  --accent-pink: #f6b7d2;
+  --accent-purple: #a78bfa;
+  --accent-gradient: linear-gradient(135deg, #f6b7d2, #a78bfa);
+  --border-glass: rgba(255,255,255,0.7);
+  --shadow-soft: 0 8px 32px rgba(180,150,255,0.12);
+  --shadow-card: 0 4px 20px rgba(255,182,213,0.12);
+  --blur: blur(24px);
+  --radius-xs: 12px;
+  --radius-sm: 16px;
+  --radius-md: 22px;
+  --radius-lg: 28px;
+  --radius-full: 999px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{width:100%;height:100%;margin:0;padding:0;overflow:hidden}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6;color:var(--text-primary);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;background:var(--bg-primary);color-scheme:light}
+img{display:block;max-width:100%}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
+  }
+}
+</script>
+<script type="module">
+import React, { useState } from "react";
+import { createRoot } from "react-dom/client";
+const h = React.createElement;
+function App() {
+  return h("div", { style: { padding: "20px", textAlign: "center" } },
+    h("h1", null, "Interlude"),
+    h("p", null, "基础框架已建立")
+  );
+}
+createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>
