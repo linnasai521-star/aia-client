@@ -13,8 +13,6 @@ import { SettingsPage } from './components/SettingsPage.js';
 import { CharacterPage } from './components/CharacterPage.js';
 import { MemoryPage } from './components/MemoryPage.js';
 import { LockScreen } from './components/LockScreen.js';
-import CharacterHall from './components/CharacterHall.js';
-import ChatListPage from './components/ChatListPage.js';
 import { parsePngCharacterCard } from './utils/pngParser.js';
 import { LoreBookEngine } from './utils/lorebookEngine.js';
 import { PromptAssembler, PromptComponents } from './utils/promptAssembler.js';
@@ -44,12 +42,6 @@ function App() {
   const promptAssembler = useRef(new PromptAssembler());
   const tokenManager = useRef(new TokenContextManager());
 
-  // 新路由状态
-  const [selectedCharacter, setSelectedCharacter] = useState(null);
-  const [selectedChat, setSelectedChat] = useState(null);
-  const [currentChatId, setCurrentChatId] = useState(null);
-  const [pageHistory, setPageHistory] = useState([]);
-
   // Init
   useEffect(() => { (async () => {
     try {
@@ -61,7 +53,6 @@ function App() {
       if (chars.length) {
         const card = normalizeCharCard(chars[0]);
         setCharCard(card);
-        setSelectedCharacter(chars[0]);
         initRpEngine(card);
       }
       setWB(await db.getWorldBook('_global'));
@@ -71,19 +62,9 @@ function App() {
 
   // Load messages
   useEffect(() => {
-    const loadMsgs = async () => {
-      if (currentChatId) {
-        const chatMsgs = await db.getMessagesByChatId(currentChatId);
-        setMsgs(chatMsgs);
-      } else if (curId) {
-        const oldMsgs = await db.getAllMessages(curId);
-        setMsgs(oldMsgs);
-      } else {
-        setMsgs([]);
-      }
-    };
-    loadMsgs();
-  }, [currentChatId, curId]);
+    if (!curId) { setMsgs([]); return; }
+    db.getAllMessages(curId).then(ms => setMsgs(ms));
+  }, [curId]);
 
   // Normalize character card for both naming conventions
   function normalizeCharCard(c) {
@@ -114,90 +95,13 @@ function App() {
     }
   }
 
-  // ===== 导航函数 =====
-  function navigateToCharacterHall() {
-    setPage('characterHall');
-    setSidebar(false);
-  }
-
-  function navigateToChatList(character) {
-    setSelectedCharacter(character);
-    setPage('chatList');
-  }
-
-  async function openChat(character, chat) {
-    setSelectedCharacter(character);
-    setSelectedChat(chat);
-    const normalized = normalizeCharCard(character);
-    setCharCard(normalized);
-    initRpEngine(normalized);
-    
-    // 创建新对话并关联 chatId
-    const conv = {
-      id: genId(),
-      title: chat.title || '新对话',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      pinned: false,
-      characterId: character.id,
-      chatId: chat.chatId
-    };
-    await db.putConversation(conv);
-    setConvs(c => [conv, ...c]);
-    setCurId(conv.id);
-    setSidebar(false);
-    setPage('chat');
-    setMsgs([]);
-    
-    // 更新 chat 的 lastMessageAt
-    try {
-      chat.lastMessageAt = Date.now();
-      chat.updatedAt = Date.now();
-      await db.putChat(chat);
-    } catch(e) { /* ignore */ }
-    
-    const fm = normalized.first_mes || normalized.firstMessage;
-    if (fm && fm.trim()) {
-      const initMsg = { id: genId()+'_init', convId: conv.id, role: 'assistant', content: fm, ts: Date.now(), chatId: chat.chatId };
-      await db.putMessage(initMsg);
-      setMsgs([initMsg]);
-    }
-  }
-
-  const createChat = useCallback(async () => {
-    const charId = charCard?.id;
-    if (!charId) return;
-    const chatId = genId();
-    await db.putChat({ chatId, characterId: charId, title: '新对话', createdAt: Date.now(), updatedAt: Date.now(), lastMessageAt: Date.now(), summary: '', messageCount: 0 });
-    setCurrentChatId(chatId);
-    setPage('chat');
-    if (charCard?.first_mes) {
-      const m = { id: genId()+'_init', chatId, role: 'assistant', content: charCard.first_mes, ts: Date.now() };
-      await db.putMessage(m);
-      setMsgs([m]);
-      await db.updateChat(chatId, { summary: charCard.first_mes.substring(0,50), messageCount: 1 });
-    }
-  }, [charCard]);
-
-  const openExistingChat = useCallback(async (chat) => {
-    setCurrentChatId(chat.chatId);
-    setMsgs([]);
-    setPage('chat');
-    const chatMsgs = await db.getMessagesByChatId(chat.chatId);
-    setMsgs(chatMsgs);
-    if (chat.characterId) {
-      const ch = await db.getCharacter(chat.characterId);
-      if (ch) setCharCard({ ...ch, first_mes: ch.first_mes || ch.firstMessage || '', mes_example: ch.mes_example || '', system_prompt: ch.system_prompt || '' });
-    }
-  }, []);
-
   const saveSetting = useCallback(async (key, value) => {
     await db.setSetting(key, value);
     setSettings(s => ({ ...s, [key]: value }));
   }, []);
 
   const createConv = useCallback(async () => {
-    const conv = { id: genId(), title: '新对话', createdAt: Date.now(), updatedAt: Date.now(), pinned: false, characterId: selectedCharacter?.id || charCard?.id || null };
+    const conv = { id: genId(), title: '新对话', createdAt: Date.now(), updatedAt: Date.now(), pinned: false };
     await db.putConversation(conv);
     setConvs(c => [conv, ...c]);
     setCurId(conv.id);
@@ -214,7 +118,7 @@ function App() {
         console.log('[RPEngine] Auto-inserted first_mes');
       }
     }
-  }, [charCard, selectedCharacter]);
+  }, [charCard]);
 
   const delConv = useCallback(async (id) => {
     await db.deleteConversation(id);
@@ -235,22 +139,11 @@ function App() {
     try {
       let characterData = null;
       let avatar = null;
+      
       if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
-        // 将 PNG 文件转为 base64（永久存储，刷新后不会丢失）
-        try {
-          avatar = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              resolve(e.target.result); // data:image/png;base64,xxxxx
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          console.log('[Import] Avatar saved as base64, length:', avatar.length);
-        } catch(err) {
-          console.warn('[Import] Avatar read failed:', err);
-          avatar = null;
-        }
+        // 创建avatar data URL
+        avatar = URL.createObjectURL(file);
+        // 解析PNG元数据
         characterData = await parsePngCharacterCard(file);
         console.log('[Import] PNG parsed:', { name: characterData.name, hasPersonality: !!characterData.personality, hasFirstMes: !!characterData.first_mes, hasScenario: !!characterData.scenario, hasWorldbook: !!(characterData.worldbook?.length), tags: characterData.tags });
       } else if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
@@ -293,7 +186,6 @@ function App() {
         await db.putCharacter(character);
         const normalized = normalizeCharCard(character);
         setCharCard(normalized);
-        setSelectedCharacter(character);
         initRpEngine(normalized);
         console.log('[Import] Character saved:', { name: normalized.name, avatar: !!normalized.avatar, hasFirstMes: !!normalized.first_mes });
         return normalized;
@@ -334,9 +226,9 @@ function App() {
 
   // 发送消息
   const sendMsg = useCallback(async (content) => {
-    if (!content.trim() || loading || (!curId && !currentChatId)) return;
+    if (!content.trim() || loading || !curId) return;
     
-    const userMsg = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'user', content, ts: Date.now() };
+    const userMsg = { id: genId(), convId: curId, role: 'user', content, ts: Date.now() };
     await db.putMessage(userMsg);
     const allMsgs = await db.getAllMessages(curId);
     setMsgs(allMsgs);
@@ -358,7 +250,7 @@ function App() {
     if (cfgId) apiCfg = await db.getApiConfig(cfgId);
     if (!apiCfg) apiCfg = await db.getDefaultApiConfig();
     if (!apiCfg?.baseURL) {
-      const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '⚠️ 请先在设置中配置 API。', ts: Date.now() };
+      const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ 请先在设置中配置 API。', ts: Date.now() };
       await db.putMessage(em); setMsgs(m => [...m, em]); return;
     }
     
@@ -371,12 +263,12 @@ function App() {
       }
       try { realKey = await decryptStr(apiCfg.encryptedKey, pin); }
       catch {
-        const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '⚠️ API Key 解密失败。', ts: Date.now() };
+        const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ API Key 解密失败。', ts: Date.now() };
         await db.putMessage(em); setMsgs(m => [...m, em]); return;
       }
     }
     if (!realKey) {
-      const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '⚠️ 请先设置 API Key。', ts: Date.now() };
+      const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ 请先设置 API Key。', ts: Date.now() };
       await db.putMessage(em); setMsgs(m => [...m, em]); return;
     }
     
@@ -405,125 +297,9 @@ function App() {
       characterCard: charCard
     });
     
-    // ===== 第 1.1 步：构建完整 system prompt（覆盖 managed.systemPrompt） =====
-    console.log('=== Prompt Assembly Start ===');
-    
-    let systemPrompt = '';
-    const charName = charCard?.name || '角色';
-    
-    // 角色身份指令
-    if (charName) {
-      systemPrompt += `你现在正在扮演「${charName}」。你必须始终以该角色的身份、性格和说话方式回复。不要承认自己是AI，不要打破角色，不要使用任何语言模型的口吻。\n\n`;
-    }
-    
-    // 角色描述
-    if (charCard?.description && charCard.description.trim()) {
-      systemPrompt += `[角色描述]\n${charCard.description}\n\n`;
-    }
-    
-    // 角色性格
-    if (charCard?.personality && charCard.personality.trim()) {
-      systemPrompt += `[角色性格]\n${charCard.personality}\n\n`;
-    }
-    
-    // 场景设定
-    if (charCard?.scenario && charCard.scenario.trim()) {
-      systemPrompt += `[场景设定]\n${charCard.scenario}\n\n`;
-    }
-    
-    // 系统提示词（角色卡自带的system_prompt）
-    if (charCard?.system_prompt && charCard.system_prompt.trim()) {
-      systemPrompt += `[角色指令]\n${charCard.system_prompt}\n\n`;
-    }
-    
-    // 示例对话
-    if (charCard?.mes_example && charCard.mes_example.trim()) {
-      systemPrompt += `[对话示例]\n${charCard.mes_example}\n\n`;
-    }
-    
-    // 世界书触发内容
-    const allLoreEntries = loreBookEngine.current.getAllEntries();
-    if (allLoreEntries.length > 0) {
-      const triggeredEntries = loreBookEngine.current.trigger(content);
-      console.log('[Worldbook] Total loaded:', allLoreEntries.length, '| Triggered:', triggeredEntries.length);
-      
-      if (triggeredEntries.length > 0) {
-        let loreText = '[世界知识]\n以下是你知道的世界设定，请在回复中自然地结合这些知识：\n';
-        triggeredEntries.forEach(entry => {
-          if (entry.content) {
-            loreText += entry.content + '\n';
-            console.log('[Worldbook] Injected:', entry.comment || 'entry-' + entry.id);
-          }
-        });
-        systemPrompt += loreText + '\n';
-      }
-    }
-    
-    // 对话规则（防止AI跳出角色）
-    systemPrompt += `[对话规则]\n`;
-    systemPrompt += `1. 你就是「${charName}」，永远不要脱离这个角色\n`;
-    systemPrompt += `2. 不要说"作为AI"、"我是语言模型"、"我是助手"等破坏角色的话\n`;
-    systemPrompt += `3. 回复要符合角色的性格、语气和说话方式\n`;
-    systemPrompt += `4. 用括号描写动作和心情，如"（微微笑）"、"（轻轻叹了口气）"\n`;
-    systemPrompt += `5. 回复要有真实情感，像真人在说话\n`;
-    systemPrompt += `6. 回复长度适中（50-300字），不要太空洞也不要太冗长\n`;
-    systemPrompt += `7. 不要总结对话，不要解释你的设定\n`;
-    systemPrompt += `8. 不要说"你想要我做什么"、"请问还有什么问题"等客服话\n`;
-    systemPrompt += `9. 像一个真实的人一样与用户互动，保持角色的个性\n`;
-    systemPrompt += `10. 回复风格参考该角色的示例对话\n\n`;
-    
-    // 首句提醒
-    if (charCard?.first_mes && charCard.first_mes.trim()) {
-      systemPrompt += `[开场记忆]\n你之前说过这段话：「${charCard.first_mes.substring(0, 200)}」\n请继续以这个角色状态和用户交流。\n\n`;
-    }
-    
-    console.log('[Prompt] Final system prompt length:', systemPrompt.length);
-    console.log('[Prompt] Preview:', systemPrompt.substring(0, 300));
-    console.log('=== Prompt Assembly End ===');
-    // ===== system prompt 构建结束 =====
-    
-    // ===== 第 1.2 步：构建 apiMsgs =====
     const apiMsgs = [];
-    
-    // 第一条：system prompt（强制非空）
-    if (systemPrompt) {
-      apiMsgs.push({ role: 'system', content: systemPrompt });
-    } else if (managed.systemPrompt) {
-      apiMsgs.push({ role: 'system', content: managed.systemPrompt });
-    }
-    
-    // 后面：聊天历史（只取最近的消息）
-    const recentMessages = allMsgs.slice(-30); // 最近30条
-    for (const msg of recentMessages) {
-      apiMsgs.push({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      });
-    }
-    
-    console.log('[Prompt] Final apiMsgs count:', apiMsgs.length);
-    console.log('[Prompt] Messages:', apiMsgs.map(m => m.role + ': ' + (m.content || '').substring(0, 20)));
-    
-    // ===== 第 2 步：调试日志 =====
-    console.log('');
-    console.log('========================================');
-    console.log('        PROMPT ASSEMBLY RESULTS        ');
-    console.log('========================================');
-    console.log('Character:', charCard?.name || 'none');
-    console.log('Description:', charCard?.description ? charCard.description.substring(0, 50) + '...' : '(empty)');
-    console.log('Personality:', charCard?.personality || '(empty)');
-    console.log('Scenario:', charCard?.scenario || '(empty)');
-    console.log('SystemPrompt (from card):', charCard?.system_prompt ? 'exists (' + charCard.system_prompt.length + ' chars)' : '(empty)');
-    console.log('MesExample:', charCard?.mes_example ? 'exists (' + charCard.mes_example.length + ' chars)' : '(empty)');
-    console.log('FirstMes:', charCard?.first_mes ? 'exists (' + charCard.first_mes.length + ' chars)' : '(empty)');
-    console.log('Worldbook entries:', allLoreEntries.length);
-    console.log('Final system prompt:', systemPrompt.length, 'chars');
-    console.log('System prompt preview:', systemPrompt.substring(0, 500));
-    console.log('apiMsgs count:', apiMsgs.length);
-    console.log('First msg role:', apiMsgs[0]?.role);
-    console.log('========================================');
-    console.log('');
-    // ===== 调试日志结束 =====
+    if (managed.systemPrompt) apiMsgs.push({ role: 'system', content: managed.systemPrompt });
+    for (const msg of managed.messages) apiMsgs.push(msg);
     
     setLoading(true); setStream(''); streamRef.current = '';
     
@@ -537,12 +313,11 @@ function App() {
         ctrl.signal,
         (full) => { streamRef.current = full; setStream(full); },
         async (full) => {
-          const am = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: full || '(空响应)', ts: Date.now() };
+          const am = { id: genId(), convId: curId, role: 'assistant', content: full || '(空响应)', ts: Date.now() };
           await db.putMessage(am); setMsgs(m => [...m, am]); setStream(''); setLoading(false); abortRef.current = null;
-          if (currentChatId) { db.updateChat(currentChatId, { lastMessageAt: Date.now(), summary: content.substring(0,50) + (content.length>50?'...':''), messageCount: msgs.length+2 }); }
         },
         async (err) => {
-          const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now() };
+          const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now() };
           await db.putMessage(em); setMsgs(m => [...m, em]); setStream(''); setLoading(false); abortRef.current = null;
         }
       );
@@ -551,10 +326,10 @@ function App() {
         { maxTokens: parseInt(fresh.maxTokens) || 4096, temperature: parseFloat(fresh.temperature) || 0.7, topP: parseFloat(fresh.topP) || 1 },
         ctrl.signal
       ).then(async (resp) => {
-        const am = { id: genId(), convId: curId, role: 'assistant', content: resp || '(空响应)', ts: Date.now(), };
+        const am = { id: genId(), convId: curId, role: 'assistant', content: resp || '(空响应)', ts: Date.now() };
         await db.putMessage(am); setMsgs(m => [...m, am]); setLoading(false); abortRef.current = null;
       }).catch(async (err) => {
-        const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now(), };
+        const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now() };
         await db.putMessage(em); setMsgs(m => [...m, em]); setLoading(false); abortRef.current = null;
       });
     }
@@ -594,61 +369,21 @@ function App() {
     importCharacterCard, importLoreBook,
     loreBookEngine: loreBookEngine.current,
     promptAssembler: promptAssembler.current,
-    tokenManager: tokenManager.current,
-    // 新路由暴露
-    selectedCharacter, selectedChat,
-    navigateToCharacterHall, navigateToChatList, openChat,
-    currentChatId, setCurrentChatId, createChat, openExistingChat, pageHistory, setPageHistory, page, setPage
+    tokenManager: tokenManager.current
   };
 
-  if (!ready) return h('div', { className: 'empty-state' },
-    h('div', { className: 'empty-state-inner' },
-      h('div', { className: 'icon' }, '⚡'),
-      h('h3', null, 'Loading...')
-    )
-  );
-
-  // 底部导航栏
-  const navItems = [
-    { id: 'chat', icon: '💬', label: '聊天', action: () => { if (charCard) { setPage('chatList'); setSidebar(false); } else { setPage('characterHall'); setSidebar(false); } } },
-    { id: 'character', icon: '🎭', label: '角色', action: () => navigateToCharacterHall() },
-    { id: 'memory', icon: '🧠', label: '记忆', action: () => { setPage('memory'); setSidebar(false); } },
-    { id: 'settings', icon: '⚙️', label: '设置', action: () => { setPage('settings'); setSidebar(false); } },
-  ];
-
-  const renderBottomNav = () => h('nav', { className: 'bottom-nav' },
-    navItems.map(item => {
-      const isActive = page === item.id
-        || (item.id === 'character' && (page === 'characterHall' || page === 'chatList'))
-        || (item.id === 'chat' && (page === 'chatList' || page === 'chat'));
-      return h('button', {
-        key: item.id,
-        className: 'bot-nav-item' + (isActive ? ' active' : ''),
-        onClick: item.action
-      },
-        h('span', { className: 'bot-nav-icon' }, item.icon),
-        h('span', { className: 'bot-nav-label' }, item.label)
-      );
-    })
-  );
+  if (!ready) return h('div', { className: 'empty-state' }, h('div', { className: 'icon' }, '⚡'), h('h3', null, 'Loading...'));
 
   return h(Ctx.Provider, { value: ctx },
-    h('div', { className: 'app-shell' },
+    h('div', { className: 'app', style: { background: settings.customBackground || settings.customBackgroundColor || 'var(--bg-primary)' } },
       h(ImmersiveSidebar),
-      h('div', { className: 'page-content-area' },
+      h('div', { className: 'main' },
         page === 'chat' ? h(ImmersiveChatPage) :
         page === 'settings' ? h(SettingsPage) :
         page === 'memory' ? h(MemoryPage) :
         page === 'character' ? h(CharacterPage) :
-        page === 'characterHall' ? h(CharacterHall, { onSelectCharacter: (char) => navigateToChatList(char) }) :
-        page === 'chatList' && charCard ? h(ChatListPage, {
-          characterId: charCard.id,
-          onSelectChat: (chat) => openExistingChat(chat),
-          onBack: () => setPage('characterHall')
-        }) :
         h(ImmersiveChatPage)
       ),
-      renderBottomNav(),
       locked ? h(LockScreen) : null
     )
   );
