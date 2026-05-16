@@ -71,9 +71,19 @@ function App() {
 
   // Load messages
   useEffect(() => {
-    if (!curId) { setMsgs([]); return; }
-    db.getAllMessages(curId).then(ms => setMsgs(ms));
-  }, [curId]);
+    const loadMsgs = async () => {
+      if (currentChatId) {
+        const chatMsgs = await db.getMessagesByChatId(currentChatId);
+        setMsgs(chatMsgs);
+      } else if (curId) {
+        const oldMsgs = await db.getAllMessages(curId);
+        setMsgs(oldMsgs);
+      } else {
+        setMsgs([]);
+      }
+    };
+    loadMsgs();
+  }, [currentChatId, curId]);
 
   // Normalize character card for both naming conventions
   function normalizeCharCard(c) {
@@ -171,6 +181,7 @@ function App() {
 
   const openExistingChat = useCallback(async (chat) => {
     setCurrentChatId(chat.chatId);
+    setMsgs([]);
     setPage('chat');
     const chatMsgs = await db.getMessagesByChatId(chat.chatId);
     setMsgs(chatMsgs);
@@ -325,7 +336,7 @@ function App() {
   const sendMsg = useCallback(async (content) => {
     if (!content.trim() || loading || !curId) return;
     
-    const userMsg = { id: genId(), convId: curId, role: 'user', content, ts: Date.now(), chatId: selectedChat?.chatId };
+    const userMsg = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'user', content, ts: Date.now() };
     await db.putMessage(userMsg);
     const allMsgs = await db.getAllMessages(curId);
     setMsgs(allMsgs);
@@ -347,7 +358,7 @@ function App() {
     if (cfgId) apiCfg = await db.getApiConfig(cfgId);
     if (!apiCfg) apiCfg = await db.getDefaultApiConfig();
     if (!apiCfg?.baseURL) {
-      const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ 请先在设置中配置 API。', ts: Date.now() };
+      const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '⚠️ 请先在设置中配置 API。', ts: Date.now() };
       await db.putMessage(em); setMsgs(m => [...m, em]); return;
     }
     
@@ -360,12 +371,12 @@ function App() {
       }
       try { realKey = await decryptStr(apiCfg.encryptedKey, pin); }
       catch {
-        const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ API Key 解密失败。', ts: Date.now() };
+        const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '⚠️ API Key 解密失败。', ts: Date.now() };
         await db.putMessage(em); setMsgs(m => [...m, em]); return;
       }
     }
     if (!realKey) {
-      const em = { id: genId(), convId: curId, role: 'assistant', content: '⚠️ 请先设置 API Key。', ts: Date.now() };
+      const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '⚠️ 请先设置 API Key。', ts: Date.now() };
       await db.putMessage(em); setMsgs(m => [...m, em]); return;
     }
     
@@ -526,11 +537,12 @@ function App() {
         ctrl.signal,
         (full) => { streamRef.current = full; setStream(full); },
         async (full) => {
-          const am = { id: genId(), convId: curId, role: 'assistant', content: full || '(空响应)', ts: Date.now(), chatId: selectedChat?.chatId };
+          const am = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: full || '(空响应)', ts: Date.now() };
           await db.putMessage(am); setMsgs(m => [...m, am]); setStream(''); setLoading(false); abortRef.current = null;
+          if (currentChatId) { db.updateChat(currentChatId, { lastMessageAt: Date.now(), summary: content.substring(0,50) + (content.length>50?'...':''), messageCount: msgs.length+2 }); }
         },
         async (err) => {
-          const em = { id: genId(), convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now() };
+          const em = { id: genId(), chatId: currentChatId || 'default', convId: curId, role: 'assistant', content: '❌ ' + (err.message || '未知错误'), ts: Date.now() };
           await db.putMessage(em); setMsgs(m => [...m, em]); setStream(''); setLoading(false); abortRef.current = null;
         }
       );
