@@ -1,4 +1,117 @@
 /* ===== 全局基础 ===== */
+
+/* ===== 聊天列表页样式 ===== */
+
+/* 聊天列表左侧面板 */
+.chat-item-left {
+  flex-shrink: 0;
+}
+
+/* 聊天项目内容区 */
+.chat-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 聊天项目顶部行（标题+时间） */
+.chat-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 聊天项目底部行（摘要+数量） */
+.chat-item-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* 空状态样式复用 */
+.empty-chat-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2d1b4e;
+  margin-bottom: 8px;
+}
+
+.empty-desc {
+  font-size: 14px;
+  color: #8c7a84;
+  margin-bottom: 24px;
+}
+
+.empty-btn {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #f7b8d9, #c5b7ff);
+  border: none;
+  border-radius: 24px;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.empty-btn:active {
+  transform: scale(0.95);
+}
+
+/* 顶部栏按钮 */
+.topbar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(200,170,240,0.15);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.topbar-btn:active {
+  transform: scale(0.9);
+}
+
+/* 顶部栏信息 */
+.topbar-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.topbar-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #2d1b4e;
+}
+
+
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
