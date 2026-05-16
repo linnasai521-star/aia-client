@@ -21,23 +21,5 @@
 <body>
 <div id="root"></div>
 <script type="module" src="src/app.js?v=16"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => {
-        console.log('SW registered:', reg.scope);
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'activated') {
-              window.location.reload();
-            }
-          });
-        });
-      });
-  });
-}
-</script>
 </body>
 </html>
