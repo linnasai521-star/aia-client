@@ -227,6 +227,9 @@ export class LoreBookEngine {
       }
     }
     
+    console.log('[LoreEngine] trigger() called with:', text.substring(0, 30));
+    console.log('[LoreEngine] matched entries:', triggered.length);
+    
     // 按优先级排序，然后按插入顺序
     triggered.sort((a, b) => {
       if (a.priority !== b.priority) return b.priority - a.priority;
